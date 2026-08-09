@@ -298,8 +298,9 @@ class LocationViewModel : ViewModel() {
         return LocationPlace(
             name = selectedResult?.name ?: suggestion?.name ?: fallbackName,
             address = selectedResult?.address?.formattedAddress
-                ?: suggestion?.formattedAddress
-                ?: "${point.latitude()}, ${point.longitude()}",
+                ?.takeIf(String::isNotBlank)
+                ?: suggestion?.formattedAddress?.takeIf(String::isNotBlank)
+                ?: fallbackName,
             latitude = selectedResult?.coordinate?.latitude() ?: point.latitude(),
             longitude = selectedResult?.coordinate?.longitude() ?: point.longitude()
         )
@@ -313,8 +314,8 @@ class LocationViewModel : ViewModel() {
             val search = placeAutocomplete
             if (search == null) {
                 val coordinatePlace = LocationPlace(
-                    name = "মানচিত্রের নির্বাচিত স্থান",
-                    address = "${point.latitude()}, ${point.longitude()}",
+                    name = "ম্যাপে নির্বাচিত স্থান",
+                    address = "ম্যাপে নির্বাচিত স্থান",
                     latitude = point.latitude(),
                     longitude = point.longitude()
                 )
@@ -337,10 +338,13 @@ class LocationViewModel : ViewModel() {
                 search.select(resultSuggestion).value
             }
             val place = LocationPlace(
-                name = selectedResult?.name ?: suggestion?.name ?: "মানচিত্রের নির্বাচিত স্থান",
+                name = selectedResult?.name?.takeIf(String::isNotBlank)
+                    ?: suggestion?.name?.takeIf(String::isNotBlank)
+                    ?: "ম্যাপে নির্বাচিত স্থান",
                 address = selectedResult?.address?.formattedAddress
-                    ?: suggestion?.formattedAddress
-                    ?: "${point.latitude()}, ${point.longitude()}",
+                    ?.takeIf(String::isNotBlank)
+                    ?: suggestion?.formattedAddress?.takeIf(String::isNotBlank)
+                    ?: "ম্যাপে নির্বাচিত স্থান",
                 latitude = selectedResult?.coordinate?.latitude() ?: point.latitude(),
                 longitude = selectedResult?.coordinate?.longitude() ?: point.longitude()
             )

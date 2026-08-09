@@ -570,6 +570,13 @@ private fun MiniMapCard(
         }
     }
 
+    LaunchedEffect(center.latitude(), center.longitude()) {
+        viewportState.setCameraOptions {
+            center(center)
+            zoom(12.4)
+        }
+    }
+
     Box(
         modifier = modifier
             .fillMaxWidth()

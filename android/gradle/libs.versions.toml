@@ -11,7 +11,7 @@ serialization = "1.10.0"
 ktor = "3.4.1"
 coil = "3.4.0"
 koin = "4.1.1"
-mapboxMaps = "11.28.0"
+mapboxMaps = "11.27.1"
 mapboxSearch = "2.27.1"
 
 [libraries]
