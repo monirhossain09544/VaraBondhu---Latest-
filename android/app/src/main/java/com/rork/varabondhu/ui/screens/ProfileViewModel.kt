@@ -10,12 +10,14 @@ import kotlinx.coroutines.flow.update
 data class ProfileUiState(
     val name: String = "আরিফ হাসান",
     val location: String = "ঢাকা, বাংলাদেশ",
-    val memberSince: String = "১২ জানুয়ারি ২০২৪",
+    val memberSince: String = "১২ জানুয়ারি ২০২৪",
     val trustScore: String = "৪.৮",
     val totalReports: Int = 241,
-    val acceptedReports: Int = 216,
+    val verifiedReports: Int = 216,
     val averageRating: String = "৪.৮",
-    val contributorRank: String = "শীর্ষ ১২%",
+    val communityRank: String = "শীর্ষ ১২%",
+    val savedRouteCount: Int = 6,
+    val badgeCount: Int = 4,
     val hasNotificationsEnabled: Boolean = true
 )
 

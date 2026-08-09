@@ -28,13 +28,19 @@ import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.EmojiEvents
+import androidx.compose.material.icons.outlined.Gavel
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material.icons.outlined.PersonOutline
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.outlined.Timeline
+import androidx.compose.material.icons.outlined.TurnedInNot
 import androidx.compose.material.icons.outlined.VerifiedUser
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -92,14 +98,21 @@ private val MetricPurple: Color = Color(0xFF6B3CC4)
 private val ProfileCardShape: RoundedCornerShape = RoundedCornerShape(16.dp)
 
 private enum class ProfileDialog {
+    MY_REPORTS,
+    SAVED_ROUTES,
+    ACTIVITY,
+    BADGES,
     EDIT_PROFILE,
     NOTIFICATIONS,
     LANGUAGE,
     HELP,
+    PRIVACY,
+    TERMS,
+    DELETE_ACCOUNT,
     LOGOUT
 }
 
-/** Compact Bengali-first profile with trust metrics and account settings. */
+/** Bengali-first profile with identity, trust stats, contributions, settings, and privacy. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
@@ -155,30 +168,131 @@ fun ProfileScreen(
                     .padding(start = 10.dp, end = 10.dp, top = 4.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                ProfileSummaryCard(uiState = uiState)
-                ProfileMetricsCard(uiState = uiState)
+                ProfileHeaderCard(uiState = uiState)
+                ProfileStatsCard(uiState = uiState)
 
-                Text(
-                    text = "অ্যাকাউন্ট ও সেটিংস",
-                    color = Ink,
-                    fontFamily = BanglaFamily,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 17.sp,
-                    modifier = Modifier.padding(start = 2.dp, top = 4.dp)
-                )
+                SectionHeading(text = "আমার অবদান")
+                SectionCard {
+                    ProfileRow(
+                        icon = Icons.Outlined.Description,
+                        label = "আমার রিপোর্ট",
+                        trailingText = uiState.totalReports.toBanglaDigits(),
+                        onClick = { activeDialog = ProfileDialog.MY_REPORTS }
+                    )
+                    RowDivider()
+                    ProfileRow(
+                        icon = Icons.Outlined.TurnedInNot,
+                        label = "সেভ করা রুট",
+                        trailingText = uiState.savedRouteCount.toBanglaDigits(),
+                        onClick = { activeDialog = ProfileDialog.SAVED_ROUTES }
+                    )
+                    RowDivider()
+                    ProfileRow(
+                        icon = Icons.Outlined.Timeline,
+                        label = "অ্যাক্টিভিটি",
+                        onClick = { activeDialog = ProfileDialog.ACTIVITY }
+                    )
+                    RowDivider()
+                    ProfileRow(
+                        icon = Icons.Outlined.EmojiEvents,
+                        label = "ব্যাজ",
+                        trailingText = uiState.badgeCount.toBanglaDigits(),
+                        onClick = { activeDialog = ProfileDialog.BADGES }
+                    )
+                }
 
-                SettingsCard(
-                    onEditProfile = { activeDialog = ProfileDialog.EDIT_PROFILE },
-                    onNotifications = { activeDialog = ProfileDialog.NOTIFICATIONS },
-                    onLanguage = { activeDialog = ProfileDialog.LANGUAGE },
-                    onHelp = { activeDialog = ProfileDialog.HELP },
-                    onLogout = { activeDialog = ProfileDialog.LOGOUT }
-                )
+                SectionHeading(text = "অ্যাকাউন্ট ও সেটিংস")
+                SectionCard {
+                    ProfileRow(
+                        icon = Icons.Outlined.PersonOutline,
+                        label = "প্রোফাইল সম্পাদনা",
+                        onClick = { activeDialog = ProfileDialog.EDIT_PROFILE }
+                    )
+                    RowDivider()
+                    ProfileRow(
+                        icon = Icons.Outlined.NotificationsNone,
+                        label = "নোটিফিকেশন",
+                        trailingText = if (uiState.hasNotificationsEnabled) "চালু" else "বন্ধ",
+                        onClick = { activeDialog = ProfileDialog.NOTIFICATIONS }
+                    )
+                    RowDivider()
+                    ProfileRow(
+                        icon = Icons.Outlined.Language,
+                        label = "ভাষা",
+                        trailingText = "বাংলা",
+                        onClick = { activeDialog = ProfileDialog.LANGUAGE }
+                    )
+                    RowDivider()
+                    ProfileRow(
+                        icon = Icons.AutoMirrored.Outlined.HelpOutline,
+                        label = "সহায়তা ও সাপোর্ট",
+                        onClick = { activeDialog = ProfileDialog.HELP }
+                    )
+                }
+
+                SectionHeading(text = "গোপনীয়তা ও নিরাপত্তা")
+                SectionCard {
+                    ProfileRow(
+                        icon = Icons.Outlined.Lock,
+                        label = "গোপনীয়তা নীতি",
+                        onClick = { activeDialog = ProfileDialog.PRIVACY }
+                    )
+                    RowDivider()
+                    ProfileRow(
+                        icon = Icons.Outlined.Gavel,
+                        label = "শর্তাবলি",
+                        onClick = { activeDialog = ProfileDialog.TERMS }
+                    )
+                    RowDivider()
+                    ProfileRow(
+                        icon = Icons.Outlined.DeleteOutline,
+                        label = "অ্যাকাউন্ট মুছুন",
+                        iconTint = DangerRed,
+                        labelColor = DangerRed,
+                        onClick = { activeDialog = ProfileDialog.DELETE_ACCOUNT }
+                    )
+                    RowDivider()
+                    ProfileRow(
+                        icon = Icons.AutoMirrored.Outlined.Logout,
+                        label = "লগআউট",
+                        iconTint = DangerRed,
+                        labelColor = DangerRed,
+                        onClick = { activeDialog = ProfileDialog.LOGOUT }
+                    )
+                }
             }
         }
     }
 
     when (activeDialog) {
+        ProfileDialog.MY_REPORTS -> InformationDialog(
+            icon = Icons.Outlined.Description,
+            title = "আমার রিপোর্ট",
+            message = "আপনি এখন পর্যন্ত ${uiState.totalReports.toBanglaDigits()}টি ভাড়ার রিপোর্ট দিয়েছেন, যার মধ্যে ${uiState.verifiedReports.toBanglaDigits()}টি যাচাই হয়েছে। নতুন ভাড়া যোগ করতে নিচের ‘ভাড়া দিন’ বাটনটি ব্যবহার করুন।",
+            onDismiss = { activeDialog = null }
+        )
+
+        ProfileDialog.SAVED_ROUTES -> InformationDialog(
+            icon = Icons.Outlined.TurnedInNot,
+            title = "সেভ করা রুট",
+            message = "আপনার নিয়মিত ব্যবহৃত ${uiState.savedRouteCount.toBanglaDigits()}টি রুট সেভ করা আছে। সেভ করা রুট থেকে সরাসরি ভাড়া দেখার সুবিধা শিগগিরই যুক্ত হবে।",
+            onDismiss = { activeDialog = null }
+        )
+
+        ProfileDialog.ACTIVITY -> InformationDialog(
+            icon = Icons.Outlined.Timeline,
+            title = "অ্যাক্টিভিটি",
+            message = "আপনার সার্চ, ভাড়া জমা ও যাচাইয়ের সাম্প্রতিক কার্যক্রমের বিস্তারিত তালিকা শিগগিরই এখানে দেখা যাবে।",
+            onDismiss = { activeDialog = null }
+        )
+
+        ProfileDialog.BADGES -> InformationDialog(
+            icon = Icons.Outlined.EmojiEvents,
+            title = "ব্যাজ",
+            message = "নির্ভরযোগ্য ভাড়ার তথ্য দেওয়ার জন্য আপনি ${uiState.badgeCount.toBanglaDigits()}টি ব্যাজ অর্জন করেছেন। বেশি রিপোর্ট যাচাই হলে নতুন ব্যাজ যুক্ত হবে।",
+            onDismiss = { activeDialog = null }
+        )
+
         ProfileDialog.EDIT_PROFILE -> EditProfileDialog(
             name = editedName,
             onNameChange = { value: String -> editedName = value.take(50) },
@@ -201,20 +315,47 @@ fun ProfileScreen(
         ProfileDialog.LANGUAGE -> InformationDialog(
             icon = Icons.Outlined.Language,
             title = "ভাষা",
-            message = "VaraBondhu বর্তমানে বাংলা ভাষায় ব্যবহার করা যাচ্ছে। ইংরেজি ভাষা শিগগিরই যুক্ত হবে।",
+            message = "VaraBondhu বর্তমানে বাংলা ভাষায় ব্যবহার করা যাচ্ছে। ইংরেজি ভাষা শিগগিরই যুক্ত হবে।",
             onDismiss = { activeDialog = null }
         )
 
         ProfileDialog.HELP -> InformationDialog(
             icon = Icons.AutoMirrored.Outlined.HelpOutline,
-            title = "সহায়তা ও সাপোর্ট",
-            message = "লোকেশন, ভাড়া খোঁজা বা ভাড়া জমা দিতে সমস্যা হলে আবার চেষ্টা করুন। সরাসরি সাপোর্ট সুবিধা শিগগিরই যুক্ত হবে।",
+            title = "সহায়তা ও সাপোর্ট",
+            message = "লোকেশন, ভাড়া খোঁজা বা ভাড়া জমা দিতে সমস্যা হলে আবার চেষ্টা করুন। সরাসরি সাপোর্ট সুবিধা শিগগিরই যুক্ত হবে।",
             onDismiss = { activeDialog = null }
         )
 
-        ProfileDialog.LOGOUT -> LogoutDialog(
-            onDismiss = { activeDialog = null },
-            onLogout = onLogout
+        ProfileDialog.PRIVACY -> InformationDialog(
+            icon = Icons.Outlined.Lock,
+            title = "গোপনীয়তা নীতি",
+            message = "আপনার দেওয়া ভাড়ার তথ্য সবার উপকারে ব্যবহার হয়, তবে আপনার নাম বা মোবাইল নম্বর অন্য ব্যবহারকারীদের দেখানো হয় না।",
+            onDismiss = { activeDialog = null }
+        )
+
+        ProfileDialog.TERMS -> InformationDialog(
+            icon = Icons.Outlined.Gavel,
+            title = "শর্তাবলি",
+            message = "VaraBondhu ব্যবহার করে আপনি সঠিক ও বাস্তব ভাড়ার তথ্য দিতে সম্মত হচ্ছেন। ভুল তথ্য বারবার দিলে অ্যাকাউন্টে সীমাবদ্ধতা আসতে পারে।",
+            onDismiss = { activeDialog = null }
+        )
+
+        ProfileDialog.DELETE_ACCOUNT -> ConfirmationDialog(
+            icon = Icons.Outlined.DeleteOutline,
+            title = "অ্যাকাউন্ট মুছবেন?",
+            message = "অ্যাকাউন্ট মুছে ফেললে আপনার প্রোফাইল ও দেওয়া তথ্য আর ফিরে পাওয়া যাবে না। এই সুবিধাটি শিগগিরই চালু হবে।",
+            confirmLabel = "বুঝেছি",
+            onConfirm = { activeDialog = null },
+            onDismiss = { activeDialog = null }
+        )
+
+        ProfileDialog.LOGOUT -> ConfirmationDialog(
+            icon = Icons.AutoMirrored.Outlined.Logout,
+            title = "লগআউট করবেন?",
+            message = "আবার ব্যবহার করতে আপনার মোবাইল নম্বর ও পাসওয়ার্ড দিয়ে লগইন করতে হবে।",
+            confirmLabel = "লগআউট",
+            onConfirm = onLogout,
+            onDismiss = { activeDialog = null }
         )
 
         null -> Unit
@@ -222,7 +363,7 @@ fun ProfileScreen(
 }
 
 @Composable
-private fun ProfileSummaryCard(
+private fun ProfileHeaderCard(
     uiState: ProfileUiState,
     modifier: Modifier = Modifier
 ) {
@@ -281,11 +422,8 @@ private fun ProfileSummaryCard(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(modifier = Modifier.height(3.dp))
-                    Surface(
-                        color = BadgeGreen,
-                        shape = CircleShape
-                    ) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Surface(color = BadgeGreen, shape = CircleShape) {
                         Row(
                             modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -317,7 +455,7 @@ private fun ProfileSummaryCard(
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = "সদস্য হয়েছেন: ${uiState.memberSince}",
+                        text = "সদস্য হয়েছেন: ${uiState.memberSince}",
                         color = InkMuted,
                         fontFamily = BanglaFamily,
                         fontSize = 10.sp,
@@ -371,15 +509,15 @@ private fun ProfileSummaryCard(
 }
 
 @Composable
-private fun ProfileMetricsCard(
+private fun ProfileStatsCard(
     uiState: ProfileUiState,
     modifier: Modifier = Modifier
 ) {
-    val metrics: List<ProfileMetric> = listOf(
-        ProfileMetric(Icons.Outlined.Description, uiState.totalReports.toBanglaDigits(), "মোট রিপোর্ট", VerifiedGreen),
-        ProfileMetric(Icons.Outlined.VerifiedUser, uiState.acceptedReports.toBanglaDigits(), "গৃহীত রিপোর্ট", MetricBlue),
-        ProfileMetric(Icons.Outlined.Star, uiState.averageRating, "গড় রেটিং", MetricAmber),
-        ProfileMetric(Icons.Outlined.Groups, uiState.contributorRank, "সেরা অবদানকারী", MetricPurple)
+    val stats: List<ProfileStat> = listOf(
+        ProfileStat(Icons.Outlined.Description, uiState.totalReports.toBanglaDigits(), "মোট রিপোর্ট", VerifiedGreen),
+        ProfileStat(Icons.Outlined.VerifiedUser, uiState.verifiedReports.toBanglaDigits(), "গৃহীত রিপোর্ট", MetricBlue),
+        ProfileStat(Icons.Outlined.Star, uiState.averageRating, "গড় রেটিং", MetricAmber),
+        ProfileStat(Icons.Outlined.Groups, uiState.communityRank, "সেরা অবদানকারী", MetricPurple)
     )
 
     Surface(
@@ -395,7 +533,7 @@ private fun ProfileMetricsCard(
                 .padding(vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            metrics.forEachIndexed { index: Int, metric: ProfileMetric ->
+            stats.forEachIndexed { index: Int, stat: ProfileStat ->
                 if (index > 0) {
                     Box(
                         modifier = Modifier
@@ -404,16 +542,13 @@ private fun ProfileMetricsCard(
                             .background(FieldBorder)
                     )
                 }
-                MetricItem(
-                    metric = metric,
-                    modifier = Modifier.weight(1f)
-                )
+                StatItem(stat = stat, modifier = Modifier.weight(1f))
             }
         }
     }
 }
 
-private data class ProfileMetric(
+private data class ProfileStat(
     val icon: ImageVector,
     val value: String,
     val label: String,
@@ -421,8 +556,8 @@ private data class ProfileMetric(
 )
 
 @Composable
-private fun MetricItem(
-    metric: ProfileMetric,
+private fun StatItem(
+    stat: ProfileStat,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -430,23 +565,23 @@ private fun MetricItem(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
-            imageVector = metric.icon,
+            imageVector = stat.icon,
             contentDescription = null,
-            tint = metric.color,
+            tint = stat.color,
             modifier = Modifier.size(22.dp)
         )
         Spacer(modifier = Modifier.height(3.dp))
         Text(
-            text = metric.value,
+            text = stat.value,
             color = Ink,
             fontFamily = BanglaFamily,
             fontWeight = FontWeight.Bold,
-            fontSize = if (metric.value.length > 5) 14.sp else 17.sp,
+            fontSize = if (stat.value.length > 5) 14.sp else 17.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
         Text(
-            text = metric.label,
+            text = stat.label,
             color = InkMuted,
             fontFamily = BanglaFamily,
             fontSize = 10.sp,
@@ -458,13 +593,24 @@ private fun MetricItem(
 }
 
 @Composable
-private fun SettingsCard(
-    onEditProfile: () -> Unit,
-    onNotifications: () -> Unit,
-    onLanguage: () -> Unit,
-    onHelp: () -> Unit,
-    onLogout: () -> Unit,
+private fun SectionHeading(
+    text: String,
     modifier: Modifier = Modifier
+) {
+    Text(
+        text = text,
+        color = Ink,
+        fontFamily = BanglaFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = 17.sp,
+        modifier = modifier.padding(start = 2.dp, top = 4.dp)
+    )
+}
+
+@Composable
+private fun SectionCard(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -473,45 +619,12 @@ private fun SettingsCard(
         border = BorderStroke(1.dp, FieldBorder),
         shadowElevation = 1.dp
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            ProfileSettingRow(
-                icon = Icons.Outlined.PersonOutline,
-                label = "প্রোফাইল সম্পাদনা",
-                onClick = onEditProfile
-            )
-            SettingDivider()
-            ProfileSettingRow(
-                icon = Icons.Outlined.NotificationsNone,
-                label = "নোটিফিকেশন সেটিংস",
-                onClick = onNotifications
-            )
-            SettingDivider()
-            ProfileSettingRow(
-                icon = Icons.Outlined.Language,
-                label = "ভাষা",
-                trailingText = "বাংলা",
-                onClick = onLanguage
-            )
-            SettingDivider()
-            ProfileSettingRow(
-                icon = Icons.AutoMirrored.Outlined.HelpOutline,
-                label = "সহায়তা ও সাপোর্ট",
-                onClick = onHelp
-            )
-            SettingDivider()
-            ProfileSettingRow(
-                icon = Icons.AutoMirrored.Outlined.Logout,
-                label = "লগআউট",
-                iconTint = DangerRed,
-                labelColor = DangerRed,
-                onClick = onLogout
-            )
-        }
+        Column(modifier = Modifier.fillMaxWidth()) { content() }
     }
 }
 
 @Composable
-private fun ProfileSettingRow(
+private fun ProfileRow(
     icon: ImageVector,
     label: String,
     onClick: () -> Unit,
@@ -554,7 +667,8 @@ private fun ProfileSettingRow(
                     text = value,
                     color = InkMuted,
                     fontFamily = BanglaFamily,
-                    fontSize = 13.sp
+                    fontSize = 13.sp,
+                    maxLines = 1
                 )
                 Spacer(modifier = Modifier.width(6.dp))
             }
@@ -569,7 +683,7 @@ private fun ProfileSettingRow(
 }
 
 @Composable
-private fun SettingDivider(modifier: Modifier = Modifier) {
+private fun RowDivider(modifier: Modifier = Modifier) {
     HorizontalDivider(
         modifier = modifier.padding(start = 51.dp),
         color = FieldBorder
@@ -644,7 +758,7 @@ private fun NotificationSettingsDialog(
         },
         title = {
             Text(
-                text = "নোটিফিকেশন সেটিংস",
+                text = "নোটিফিকেশন",
                 color = Ink,
                 fontFamily = BanglaFamily,
                 fontWeight = FontWeight.Bold
@@ -657,14 +771,14 @@ private fun NotificationSettingsDialog(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "ভাড়ার আপডেট",
+                        text = "ভাড়ার আপডেট",
                         color = Ink,
                         fontFamily = BanglaFamily,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp
                     )
                     Text(
-                        text = "নতুন ভাড়া ও রিপোর্ট যাচাইয়ের খবর পান",
+                        text = "নতুন ভাড়া ও রিপোর্ট যাচাইয়ের খবর পান",
                         color = InkMuted,
                         fontFamily = BanglaFamily,
                         fontSize = 12.sp,
@@ -732,22 +846,26 @@ private fun InformationDialog(
 }
 
 @Composable
-private fun LogoutDialog(
-    onDismiss: () -> Unit,
-    onLogout: () -> Unit
+private fun ConfirmationDialog(
+    icon: ImageVector,
+    title: String,
+    message: String,
+    confirmLabel: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = {
             Icon(
-                imageVector = Icons.AutoMirrored.Outlined.Logout,
+                imageVector = icon,
                 contentDescription = null,
                 tint = DangerRed
             )
         },
         title = {
             Text(
-                text = "লগআউট করবেন?",
+                text = title,
                 color = Ink,
                 fontFamily = BanglaFamily,
                 fontWeight = FontWeight.Bold
@@ -755,22 +873,23 @@ private fun LogoutDialog(
         },
         text = {
             Text(
-                text = "আবার ব্যবহার করতে আপনার মোবাইল নম্বর ও পাসওয়ার্ড দিয়ে লগইন করতে হবে।",
+                text = message,
                 color = InkMuted,
-                fontFamily = BanglaFamily
+                fontFamily = BanglaFamily,
+                lineHeight = 20.sp
             )
         },
         confirmButton = {
             Button(
-                onClick = onLogout,
+                onClick = onConfirm,
                 colors = ButtonDefaults.buttonColors(containerColor = DangerRed)
             ) {
-                Text("লগআউট", fontFamily = BanglaFamily)
+                Text(confirmLabel, fontFamily = BanglaFamily)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("থাকুন", color = BrandGreen, fontFamily = BanglaFamily)
+                Text("বাতিল", color = BrandGreen, fontFamily = BanglaFamily)
             }
         },
         containerColor = CardWhite
