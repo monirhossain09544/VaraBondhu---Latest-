@@ -62,6 +62,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rork.varabondhu.R
+import com.rork.varabondhu.ui.components.AppBottomNavigation
+import com.rork.varabondhu.ui.components.MainDestination
 import com.rork.varabondhu.ui.theme.AppTheme
 import com.rork.varabondhu.ui.theme.BanglaFamily
 import com.rork.varabondhu.ui.theme.BrandGreen
@@ -119,6 +121,7 @@ fun HomeScreen(
     onSwapLocations: () -> Unit = {},
     onNavigateToVaraDin: () -> Unit = {},
     onNavigateToFareResult: () -> Unit = {},
+    onNavigateToProfile: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val navigationBottomInset = WindowInsets.navigationBars
@@ -171,8 +174,11 @@ fun HomeScreen(
             }
         }
 
-        HomeBottomNavigation(
+        AppBottomNavigation(
+            selectedDestination = MainDestination.HOME,
+            onNavigateHome = {},
             onNavigateToVaraDin = onNavigateToVaraDin,
+            onNavigateToProfile = onNavigateToProfile,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
     }
@@ -802,144 +808,6 @@ private fun FareContributionBanner(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun HomeBottomNavigation(
-    onNavigateToVaraDin: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val navigationBottomInset = WindowInsets.navigationBars
-        .asPaddingValues()
-        .calculateBottomPadding()
-
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(88.dp + navigationBottomInset)
-    ) {
-        Surface(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .height(70.dp + navigationBottomInset),
-            color = CardWhite,
-            shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, BottomBarBorder),
-            shadowElevation = 8.dp
-        ) {}
-
-        Row(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .offset(y = 18.dp)
-                .fillMaxWidth()
-                .height(68.dp)
-                .padding(horizontal = 3.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            BottomNavItem(
-                icon = Icons.Rounded.Home,
-                label = "হোম",
-                isSelected = true,
-                modifier = Modifier.weight(1f)
-            )
-            BottomNavItem(
-                icon = Icons.Rounded.BarChart,
-                label = "চার্ট রেটিং",
-                modifier = Modifier.weight(1f)
-            )
-            Spacer(modifier = Modifier.weight(1f))
-            BottomNavItem(
-                icon = Icons.Rounded.Assessment,
-                label = "রিপোর্ট",
-                modifier = Modifier.weight(1f)
-            )
-            BottomNavItem(
-                icon = Icons.Rounded.PersonOutline,
-                label = "প্রোফাইল",
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        AddFareNavItem(
-            onClick = onNavigateToVaraDin,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .width(76.dp)
-        )
-    }
-}
-
-@Composable
-private fun BottomNavItem(
-    icon: ImageVector,
-    label: String,
-    modifier: Modifier = Modifier,
-    isSelected: Boolean = false
-) {
-    val itemColor: Color = if (isSelected) SectionGreen else InkMuted
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        IconButton(
-            onClick = {},
-            modifier = Modifier.size(36.dp)
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = itemColor,
-                modifier = Modifier.size(22.dp)
-            )
-        }
-        Text(
-            text = label,
-            color = itemColor,
-            fontFamily = BanglaFamily,
-            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-            fontSize = 10.sp,
-            maxLines = 1
-        )
-    }
-}
-
-@Composable
-private fun AddFareNavItem(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Surface(
-            onClick = onClick,
-            modifier = Modifier.size(52.dp),
-            shape = CircleShape,
-            color = ButtonGreen,
-            shadowElevation = 7.dp
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = Icons.Outlined.Add,
-                    contentDescription = "ভাড়া দিন",
-                    tint = Color.White,
-                    modifier = Modifier.size(28.dp)
-                )
-            }
-        }
-        Text(
-            text = "ভাড়া দিন",
-            color = InkMuted,
-            fontFamily = BanglaFamily,
-            fontSize = 10.sp,
-            maxLines = 1
-        )
     }
 }
 

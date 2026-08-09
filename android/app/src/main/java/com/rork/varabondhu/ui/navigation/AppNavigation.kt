@@ -21,6 +21,7 @@ import com.rork.varabondhu.ui.screens.HomeScreen
 import com.rork.varabondhu.ui.screens.LocationPickerScreen
 import com.rork.varabondhu.ui.screens.LoginScreen
 import com.rork.varabondhu.ui.screens.OtpVerificationScreen
+import com.rork.varabondhu.ui.screens.ProfileScreen
 import com.rork.varabondhu.ui.screens.SignUpScreen
 import com.rork.varabondhu.ui.screens.SplashScreen
 import com.rork.varabondhu.ui.screens.VaraDinScreen
@@ -33,6 +34,7 @@ private object Route {
     const val FORGOT_PASSWORD = "forgotPassword"
     const val OTP = "otp/{phone}"
     const val HOME = "home"
+    const val PROFILE = "profile"
     const val VARA_DIN = "varaDin"
     const val FARE_RESULT = "fareResult"
     const val LOCATION_PICKER = "locationPicker/{target}"
@@ -179,7 +181,25 @@ fun AppNavigation() {
                 onDestinationClick = { openLocationPicker(LocationTarget.DESTINATION) },
                 onSwapLocations = locationViewModel::swapRoute,
                 onNavigateToVaraDin = { navController.navigate(Route.VARA_DIN) { launchSingleTop = true } },
-                onNavigateToFareResult = { navController.navigate(Route.FARE_RESULT) { launchSingleTop = true } }
+                onNavigateToFareResult = { navController.navigate(Route.FARE_RESULT) { launchSingleTop = true } },
+                onNavigateToProfile = { navController.navigate(Route.PROFILE) { launchSingleTop = true } }
+            )
+        }
+
+        composable(Route.PROFILE) {
+            ProfileScreen(
+                onNavigateHome = {
+                    navController.popBackStack(Route.HOME, inclusive = false)
+                },
+                onNavigateToVaraDin = {
+                    navController.navigate(Route.VARA_DIN) { launchSingleTop = true }
+                },
+                onLogout = {
+                    navController.navigate(Route.LOGIN) {
+                        popUpTo(Route.HOME) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
             )
         }
 
