@@ -117,23 +117,22 @@ private enum class ProfileDialog {
     NOTIFICATIONS,
     LANGUAGE,
     HELP,
-    PRIVACY,
     TERMS,
     DELETE_ACCOUNT,
     LOGOUT
 }
 
 private enum class ProfileSection {
-    SETTINGS,
     PRIVACY
 }
 
-/** Compact Bengali-first profile: identity + stats card, contribution tiles, collapsible settings. */
+/** Compact Bengali-first profile with visible account settings and grouped privacy actions. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     onNavigateHome: () -> Unit,
     onNavigateToVaraDin: () -> Unit,
+    onNavigateToPrivacyPolicy: () -> Unit,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ProfileViewModel = viewModel()
@@ -207,20 +206,8 @@ fun ProfileScreen(
                     onOpenBadges = { activeDialog = ProfileDialog.BADGES }
                 )
 
-                ExpandableSection(
-                    icon = Icons.Outlined.PersonOutline,
-                    title = "অ্যাকাউন্ট ও সেটিংস",
-                    summary = "প্রোফাইল, নোটিফিকেশন, ভাষা",
-                    isExpanded = expandedSection == ProfileSection.SETTINGS,
-                    onToggle = {
-                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                        expandedSection = if (expandedSection == ProfileSection.SETTINGS) {
-                            null
-                        } else {
-                            ProfileSection.SETTINGS
-                        }
-                    }
-                ) {
+                ProfileSectionHeading(text = "অ্যাকাউন্ট ও সেটিংস")
+                ProfileSectionCard {
                     ProfileRow(
                         icon = Icons.Outlined.PersonOutline,
                         label = "প্রোফাইল সম্পাদনা",
@@ -265,7 +252,7 @@ fun ProfileScreen(
                     ProfileRow(
                         icon = Icons.Outlined.Lock,
                         label = "গোপনীয়তা নীতি",
-                        onClick = { activeDialog = ProfileDialog.PRIVACY }
+                        onClick = onNavigateToPrivacyPolicy
                     )
                     RowDivider()
                     ProfileRow(
@@ -347,13 +334,6 @@ fun ProfileScreen(
             icon = Icons.AutoMirrored.Outlined.HelpOutline,
             title = "সহায়তা ও সাপোর্ট",
             message = "লোকেশন, ভাড়া খোঁজা বা ভাড়া জমা দিতে সমস্যা হলে আবার চেষ্টা করুন। সরাসরি সাপোর্ট সুবিধা শিগগিরই যুক্ত হবে।",
-            onDismiss = { activeDialog = null }
-        )
-
-        ProfileDialog.PRIVACY -> InformationDialog(
-            icon = Icons.Outlined.Lock,
-            title = "গোপনীয়তা নীতি",
-            message = "আপনার দেওয়া ভাড়ার তথ্য সবার উপকারে ব্যবহার হয়, তবে আপনার নাম বা মোবাইল নম্বর অন্য ব্যবহারকারীদের দেখানো হয় না।",
             onDismiss = { activeDialog = null }
         )
 
@@ -712,7 +692,38 @@ private fun ContributionTile(
     }
 }
 
-/** Collapsible card so settings stay one tap away without stretching the page. */
+@Composable
+private fun ProfileSectionHeading(
+    text: String,
+    modifier: Modifier = Modifier
+) {
+    Text(
+        text = text,
+        color = Ink,
+        fontFamily = BanglaFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = 15.sp,
+        modifier = modifier.padding(start = 2.dp, top = 2.dp)
+    )
+}
+
+@Composable
+private fun ProfileSectionCard(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = CardWhite,
+        shape = ProfileCardShape,
+        border = BorderStroke(1.dp, FieldBorder),
+        shadowElevation = 1.dp
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) { content() }
+    }
+}
+
+/** Collapsible privacy card keeps lower-frequency actions compact. */
 @Composable
 private fun ExpandableSection(
     icon: ImageVector,
@@ -1134,6 +1145,7 @@ private fun ProfileScreenPreview() {
         ProfileScreen(
             onNavigateHome = {},
             onNavigateToVaraDin = {},
+            onNavigateToPrivacyPolicy = {},
             onLogout = {}
         )
     }

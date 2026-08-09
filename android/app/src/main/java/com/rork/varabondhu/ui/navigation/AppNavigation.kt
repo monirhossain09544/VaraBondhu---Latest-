@@ -21,6 +21,7 @@ import com.rork.varabondhu.ui.screens.HomeScreen
 import com.rork.varabondhu.ui.screens.LocationPickerScreen
 import com.rork.varabondhu.ui.screens.LoginScreen
 import com.rork.varabondhu.ui.screens.OtpVerificationScreen
+import com.rork.varabondhu.ui.screens.PrivacyPolicyScreen
 import com.rork.varabondhu.ui.screens.ProfileScreen
 import com.rork.varabondhu.ui.screens.SignUpScreen
 import com.rork.varabondhu.ui.screens.SplashScreen
@@ -35,6 +36,7 @@ private object Route {
     const val OTP = "otp/{phone}"
     const val HOME = "home"
     const val PROFILE = "profile"
+    const val PRIVACY_POLICY = "privacyPolicy"
     const val VARA_DIN = "varaDin"
     const val FARE_RESULT = "fareResult"
     const val LOCATION_PICKER = "locationPicker/{target}"
@@ -194,6 +196,9 @@ fun AppNavigation() {
                 onNavigateToVaraDin = {
                     navController.navigate(Route.VARA_DIN) { launchSingleTop = true }
                 },
+                onNavigateToPrivacyPolicy = {
+                    navController.navigate(Route.PRIVACY_POLICY) { launchSingleTop = true }
+                },
                 onLogout = {
                     navController.navigate(Route.LOGIN) {
                         popUpTo(Route.HOME) { inclusive = true }
@@ -201,6 +206,20 @@ fun AppNavigation() {
                     }
                 }
             )
+        }
+
+        composable(
+            route = Route.PRIVACY_POLICY,
+            enterTransition = {
+                slideInHorizontally(animationSpec = tween(TRANSITION_MILLIS)) { it / 3 } +
+                    fadeIn(animationSpec = tween(TRANSITION_MILLIS))
+            },
+            popExitTransition = {
+                slideOutHorizontally(animationSpec = tween(TRANSITION_MILLIS)) { it / 3 } +
+                    fadeOut(animationSpec = tween(TRANSITION_MILLIS))
+            }
+        ) {
+            PrivacyPolicyScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         composable(Route.VARA_DIN) {
