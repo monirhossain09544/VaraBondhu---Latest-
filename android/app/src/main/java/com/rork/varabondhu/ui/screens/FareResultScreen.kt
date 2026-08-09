@@ -19,7 +19,6 @@ import androidx.compose.material.icons.outlined.VerifiedUser
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -29,11 +28,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.mapbox.geojson.Point
-import com.mapbox.maps.extension.compose.MapboxMap
-import com.mapbox.maps.extension.compose.animation.viewport.rememberMapViewportState
-import com.mapbox.maps.extension.compose.annotation.generated.CircleAnnotation
-import com.mapbox.maps.extension.compose.annotation.generated.PolylineAnnotation
 import com.rork.varabondhu.location.LocationDefaults
 import com.rork.varabondhu.location.LocationPlace
 import com.rork.varabondhu.ui.theme.BanglaFamily
@@ -112,8 +106,6 @@ fun FareResultScreen(
                 destination = destination,
                 onSwapLocations = onSwapLocations
             )
-            Spacer(modifier = Modifier.height(10.dp))
-            RouteMapPreview(origin = origin, destination = destination)
             Spacer(modifier = Modifier.height(12.dp))
             VehicleFilterTabs()
             Spacer(modifier = Modifier.height(12.dp))
@@ -343,92 +335,6 @@ fun RouteSummaryCard(
                         contentDescription = null,
                         tint = com.rork.varabondhu.ui.theme.FieldPlaceholder,
                         modifier = Modifier.size(16.dp).padding(start = 2.dp)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun RouteMapPreview(
-    origin: LocationPlace,
-    destination: LocationPlace,
-    modifier: Modifier = Modifier
-) {
-    val center = Point.fromLngLat(
-        (origin.longitude + destination.longitude) / 2.0,
-        (origin.latitude + destination.latitude) / 2.0
-    )
-    val span = maxOf(
-        kotlin.math.abs(origin.longitude - destination.longitude),
-        kotlin.math.abs(origin.latitude - destination.latitude)
-    )
-    val zoom = when {
-        span < 0.01 -> 14.5
-        span < 0.03 -> 13.0
-        span < 0.08 -> 11.5
-        span < 0.2 -> 10.0
-        span < 1.0 -> 8.0
-        else -> 5.5
-    }
-
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(170.dp),
-        color = Color.White,
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-        shadowElevation = 2.dp
-    ) {
-        key(origin.latitude, origin.longitude, destination.latitude, destination.longitude) {
-            val mapViewportState = rememberMapViewportState {
-                setCameraOptions {
-                    center(center)
-                    zoom(zoom)
-                }
-            }
-            Box(modifier = Modifier.fillMaxSize()) {
-                MapboxMap(
-                    modifier = Modifier.fillMaxSize(),
-                    mapViewportState = mapViewportState,
-                    compass = {},
-                    scaleBar = {}
-                ) {
-                    PolylineAnnotation(points = listOf(origin.point, destination.point)) {
-                        lineColor = BrandGreen
-                        lineWidth = 5.0
-                        lineOpacity = 0.85
-                    }
-                    CircleAnnotation(point = origin.point) {
-                        circleColor = BrandGreen
-                        circleRadius = 8.0
-                        circleStrokeColor = Color.White
-                        circleStrokeWidth = 3.0
-                    }
-                    CircleAnnotation(point = destination.point) {
-                        circleColor = Color(0xFFE53935)
-                        circleRadius = 8.0
-                        circleStrokeColor = Color.White
-                        circleStrokeWidth = 3.0
-                    }
-                }
-
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(10.dp),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
-                    color = Color.White.copy(alpha = 0.94f),
-                    shadowElevation = 2.dp
-                ) {
-                    Text(
-                        text = "রুট প্রিভিউ",
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                        fontFamily = BanglaFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 11.sp,
-                        color = Ink
                     )
                 }
             }

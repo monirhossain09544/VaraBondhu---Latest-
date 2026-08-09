@@ -208,10 +208,7 @@ private fun LocationListPicker(
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
-        PickerHeader(
-            target = state.activeTarget,
-            onNavigateBack = onNavigateBack
-        )
+        PickerHeader(onNavigateBack = onNavigateBack)
 
         SearchField(
             query = state.query,
@@ -307,7 +304,6 @@ private fun LocationListPicker(
 
 @Composable
 private fun PickerHeader(
-    target: LocationTarget,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -341,7 +337,7 @@ private fun PickerHeader(
         }
         Spacer(modifier = Modifier.width(9.dp))
         Text(
-            text = if (target == LocationTarget.ORIGIN) "যেখান থেকে যাচ্ছি" else "যেখানে যেতে চাই",
+            text = "লোকেশন নির্বাচন করুন",
             fontFamily = BanglaFamily,
             fontWeight = FontWeight.Bold,
             fontSize = 19.sp,
