@@ -1,5 +1,12 @@
 package com.rork.varabondhu.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -31,6 +38,7 @@ import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.EmojiEvents
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Gavel
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Language
@@ -65,8 +73,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -112,7 +123,12 @@ private enum class ProfileDialog {
     LOGOUT
 }
 
-/** Bengali-first profile with identity, trust stats, contributions, settings, and privacy. */
+private enum class ProfileSection {
+    SETTINGS,
+    PRIVACY
+}
+
+/** Compact Bengali-first profile: identity + stats card, contribution tiles, collapsible settings. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
@@ -124,7 +140,9 @@ fun ProfileScreen(
 ) {
     val uiState: ProfileUiState by viewModel.uiState.collectAsStateWithLifecycle()
     var activeDialog: ProfileDialog? by rememberSaveable { mutableStateOf(null) }
+    var expandedSection: ProfileSection? by rememberSaveable { mutableStateOf(null) }
     var editedName: String by rememberSaveable(uiState.name) { mutableStateOf(uiState.name) }
+    val haptics = LocalHapticFeedback.current
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -140,6 +158,17 @@ fun ProfileScreen(
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp
                     )
+                },
+                actions = {
+                    TextButton(onClick = { activeDialog = ProfileDialog.EDIT_PROFILE }) {
+                        Text(
+                            text = "সম্পাদনা",
+                            color = BrandGreen,
+                            fontFamily = BanglaFamily,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp
+                        )
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = ProfileBackground)
             )
@@ -165,44 +194,33 @@ fun ProfileScreen(
                     .fillMaxWidth()
                     .widthIn(max = 600.dp)
                     .verticalScroll(rememberScrollState())
-                    .padding(start = 10.dp, end = 10.dp, top = 4.dp, bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .padding(start = 10.dp, end = 10.dp, top = 2.dp, bottom = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                ProfileHeaderCard(uiState = uiState)
-                ProfileStatsCard(uiState = uiState)
+                IdentityCard(uiState = uiState)
 
-                SectionHeading(text = "আমার অবদান")
-                SectionCard {
-                    ProfileRow(
-                        icon = Icons.Outlined.Description,
-                        label = "আমার রিপোর্ট",
-                        trailingText = uiState.totalReports.toBanglaDigits(),
-                        onClick = { activeDialog = ProfileDialog.MY_REPORTS }
-                    )
-                    RowDivider()
-                    ProfileRow(
-                        icon = Icons.Outlined.TurnedInNot,
-                        label = "সেভ করা রুট",
-                        trailingText = uiState.savedRouteCount.toBanglaDigits(),
-                        onClick = { activeDialog = ProfileDialog.SAVED_ROUTES }
-                    )
-                    RowDivider()
-                    ProfileRow(
-                        icon = Icons.Outlined.Timeline,
-                        label = "অ্যাক্টিভিটি",
-                        onClick = { activeDialog = ProfileDialog.ACTIVITY }
-                    )
-                    RowDivider()
-                    ProfileRow(
-                        icon = Icons.Outlined.EmojiEvents,
-                        label = "ব্যাজ",
-                        trailingText = uiState.badgeCount.toBanglaDigits(),
-                        onClick = { activeDialog = ProfileDialog.BADGES }
-                    )
-                }
+                ContributionGrid(
+                    uiState = uiState,
+                    onOpenReports = { activeDialog = ProfileDialog.MY_REPORTS },
+                    onOpenSavedRoutes = { activeDialog = ProfileDialog.SAVED_ROUTES },
+                    onOpenActivity = { activeDialog = ProfileDialog.ACTIVITY },
+                    onOpenBadges = { activeDialog = ProfileDialog.BADGES }
+                )
 
-                SectionHeading(text = "অ্যাকাউন্ট ও সেটিংস")
-                SectionCard {
+                ExpandableSection(
+                    icon = Icons.Outlined.PersonOutline,
+                    title = "অ্যাকাউন্ট ও সেটিংস",
+                    summary = "প্রোফাইল, নোটিফিকেশন, ভাষা",
+                    isExpanded = expandedSection == ProfileSection.SETTINGS,
+                    onToggle = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        expandedSection = if (expandedSection == ProfileSection.SETTINGS) {
+                            null
+                        } else {
+                            ProfileSection.SETTINGS
+                        }
+                    }
+                ) {
                     ProfileRow(
                         icon = Icons.Outlined.PersonOutline,
                         label = "প্রোফাইল সম্পাদনা",
@@ -230,8 +248,20 @@ fun ProfileScreen(
                     )
                 }
 
-                SectionHeading(text = "গোপনীয়তা ও নিরাপত্তা")
-                SectionCard {
+                ExpandableSection(
+                    icon = Icons.Outlined.Lock,
+                    title = "গোপনীয়তা ও নিরাপত্তা",
+                    summary = "নীতি, শর্তাবলি, অ্যাকাউন্ট",
+                    isExpanded = expandedSection == ProfileSection.PRIVACY,
+                    onToggle = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        expandedSection = if (expandedSection == ProfileSection.PRIVACY) {
+                            null
+                        } else {
+                            ProfileSection.PRIVACY
+                        }
+                    }
+                ) {
                     ProfileRow(
                         icon = Icons.Outlined.Lock,
                         label = "গোপনীয়তা নীতি",
@@ -251,15 +281,9 @@ fun ProfileScreen(
                         labelColor = DangerRed,
                         onClick = { activeDialog = ProfileDialog.DELETE_ACCOUNT }
                     )
-                    RowDivider()
-                    ProfileRow(
-                        icon = Icons.AutoMirrored.Outlined.Logout,
-                        label = "লগআউট",
-                        iconTint = DangerRed,
-                        labelColor = DangerRed,
-                        onClick = { activeDialog = ProfileDialog.LOGOUT }
-                    )
                 }
+
+                LogoutButton(onClick = { activeDialog = ProfileDialog.LOGOUT })
             }
         }
     }
@@ -282,7 +306,7 @@ fun ProfileScreen(
         ProfileDialog.ACTIVITY -> InformationDialog(
             icon = Icons.Outlined.Timeline,
             title = "অ্যাক্টিভিটি",
-            message = "আপনার সার্চ, ভাড়া জমা ও যাচাইয়ের সাম্প্রতিক কার্যক্রমের বিস্তারিত তালিকা শিগগিরই এখানে দেখা যাবে।",
+            message = "গত ৩০ দিনে আপনার ${uiState.recentActivityCount.toBanglaDigits()}টি কার্যক্রম রেকর্ড হয়েছে। বিস্তারিত তালিকা শিগগিরই এখানে দেখা যাবে।",
             onDismiss = { activeDialog = null }
         )
 
@@ -362,15 +386,15 @@ fun ProfileScreen(
     }
 }
 
+/** Identity, verification badge, trust score and the four headline stats in one card. */
 @Composable
-private fun ProfileHeaderCard(
+private fun IdentityCard(
     uiState: ProfileUiState,
     modifier: Modifier = Modifier
 ) {
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val isCompact: Boolean = maxWidth < 350.dp
-        val avatarSize: Dp = if (isCompact) 62.dp else 72.dp
-        val trustCardWidth: Dp = if (isCompact) 68.dp else 78.dp
+        val avatarSize: Dp = if (isCompact) 52.dp else 58.dp
 
         Surface(
             modifier = Modifier.fillMaxWidth(),
@@ -379,170 +403,181 @@ private fun ProfileHeaderCard(
             border = BorderStroke(1.dp, FieldBorder),
             shadowElevation = 1.dp
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Row(
                     modifier = Modifier
-                        .size(avatarSize)
-                        .clip(CircleShape)
-                        .background(MintGlow)
-                        .border(2.dp, BrandGreen.copy(alpha = 0.16f), CircleShape),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(avatarSize - 12.dp)
+                            .size(avatarSize)
                             .clip(CircleShape)
-                            .background(BrandGreen),
+                            .background(MintGlow)
+                            .border(2.dp, BrandGreen.copy(alpha = 0.16f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
+                        Box(
+                            modifier = Modifier
+                                .size(avatarSize - 10.dp)
+                                .clip(CircleShape)
+                                .background(BrandGreen),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = uiState.name.trim().take(1).ifBlank { "আ" },
+                                color = Color.White,
+                                fontFamily = BanglaFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = if (isCompact) 21.sp else 24.sp
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(10.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = uiState.name.trim().take(1).ifBlank { "আ" },
-                            color = Color.White,
+                            text = uiState.name,
+                            color = Ink,
                             fontFamily = BanglaFamily,
                             fontWeight = FontWeight.Bold,
-                            fontSize = if (isCompact) 25.sp else 29.sp
+                            fontSize = if (isCompact) 16.sp else 18.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Surface(color = BadgeGreen, shape = CircleShape) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.CheckCircle,
+                                    contentDescription = null,
+                                    tint = VerifiedGreen,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = "যাচাইকৃত অবদানকারী",
+                                    color = VerifiedGreen,
+                                    fontFamily = BanglaFamily,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 10.sp,
+                                    maxLines = 1
+                                )
+                            }
+                        }
                     }
-                }
 
-                Spacer(modifier = Modifier.width(if (isCompact) 9.dp else 12.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
 
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = uiState.name,
-                        color = Ink,
-                        fontFamily = BanglaFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = if (isCompact) 17.sp else 19.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Surface(color = BadgeGreen, shape = CircleShape) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                    Surface(
+                        color = BadgeGreen,
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Icon(
-                                imageVector = Icons.Outlined.CheckCircle,
-                                contentDescription = null,
-                                tint = VerifiedGreen,
-                                modifier = Modifier.size(13.dp)
-                            )
-                            Spacer(modifier = Modifier.width(3.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Shield,
+                                    contentDescription = null,
+                                    tint = VerifiedGreen,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = uiState.trustScore,
+                                    color = VerifiedGreen,
+                                    fontFamily = BanglaFamily,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp
+                                )
+                            }
                             Text(
-                                text = "যাচাইকৃত অবদানকারী",
-                                color = VerifiedGreen,
+                                text = "ট্রাস্ট স্কোর",
+                                color = VerifiedGreen.copy(alpha = 0.75f),
                                 fontFamily = BanglaFamily,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 10.sp,
+                                fontSize = 9.sp,
                                 maxLines = 1
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = uiState.location,
-                        color = InkMuted,
-                        fontFamily = BanglaFamily,
-                        fontSize = 11.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = "সদস্য হয়েছেন: ${uiState.memberSince}",
-                        color = InkMuted,
-                        fontFamily = BanglaFamily,
-                        fontSize = 10.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
                 }
 
-                Spacer(modifier = Modifier.width(if (isCompact) 6.dp else 10.dp))
+                HorizontalDivider(color = FieldBorder)
 
-                Surface(
-                    modifier = Modifier
-                        .width(trustCardWidth)
-                        .height(94.dp),
-                    color = CardWhite,
-                    shape = RoundedCornerShape(13.dp),
-                    border = BorderStroke(1.dp, FieldBorder),
-                    shadowElevation = 2.dp
-                ) {
-                    Column(
-                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Shield,
-                            contentDescription = null,
-                            tint = VerifiedGreen,
-                            modifier = Modifier.size(25.dp)
-                        )
-                        Text(
-                            text = uiState.trustScore,
-                            color = Ink,
-                            fontFamily = BanglaFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp
-                        )
-                        Text(
-                            text = "বিশ্বাসযোগ্যতা\nস্কোর",
-                            color = InkMuted,
-                            fontFamily = BanglaFamily,
-                            fontSize = 9.sp,
-                            lineHeight = 11.sp,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
+                StatsRow(uiState = uiState)
             }
         }
     }
 }
 
 @Composable
-private fun ProfileStatsCard(
+private fun StatsRow(
     uiState: ProfileUiState,
     modifier: Modifier = Modifier
 ) {
     val stats: List<ProfileStat> = listOf(
         ProfileStat(Icons.Outlined.Description, uiState.totalReports.toBanglaDigits(), "মোট রিপোর্ট", VerifiedGreen),
-        ProfileStat(Icons.Outlined.VerifiedUser, uiState.verifiedReports.toBanglaDigits(), "গৃহীত রিপোর্ট", MetricBlue),
-        ProfileStat(Icons.Outlined.Star, uiState.averageRating, "গড় রেটিং", MetricAmber),
-        ProfileStat(Icons.Outlined.Groups, uiState.communityRank, "সেরা অবদানকারী", MetricPurple)
+        ProfileStat(Icons.Outlined.VerifiedUser, uiState.verifiedReports.toBanglaDigits(), "গৃহীত", MetricBlue),
+        ProfileStat(Icons.Outlined.Star, uiState.averageRating, "রেটিং", MetricAmber),
+        ProfileStat(Icons.Outlined.Groups, uiState.communityRank, "কমিউনিটি র‍্যাংক", MetricPurple)
     )
 
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        color = CardWhite,
-        shape = ProfileCardShape,
-        border = BorderStroke(1.dp, FieldBorder),
-        shadowElevation = 1.dp
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            stats.forEachIndexed { index: Int, stat: ProfileStat ->
-                if (index > 0) {
-                    Box(
-                        modifier = Modifier
-                            .width(1.dp)
-                            .height(58.dp)
-                            .background(FieldBorder)
+        stats.forEachIndexed { index: Int, stat: ProfileStat ->
+            if (index > 0) {
+                Box(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .height(34.dp)
+                        .background(FieldBorder)
+                )
+            }
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 2.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = stat.icon,
+                        contentDescription = null,
+                        tint = stat.color,
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Text(
+                        text = stat.value,
+                        color = Ink,
+                        fontFamily = BanglaFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = if (stat.value.length > 4) 13.sp else 16.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
-                StatItem(stat = stat, modifier = Modifier.weight(1f))
+                Text(
+                    text = stat.label,
+                    color = InkMuted,
+                    fontFamily = BanglaFamily,
+                    fontSize = 10.sp,
+                    lineHeight = 12.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center
+                )
             }
         }
     }
@@ -555,63 +590,145 @@ private data class ProfileStat(
     val color: Color
 )
 
+/** Two-by-two tile grid so contribution shortcuts stay glanceable instead of a long list. */
 @Composable
-private fun StatItem(
-    stat: ProfileStat,
+private fun ContributionGrid(
+    uiState: ProfileUiState,
+    onOpenReports: () -> Unit,
+    onOpenSavedRoutes: () -> Unit,
+    onOpenActivity: () -> Unit,
+    onOpenBadges: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier.padding(horizontal = 2.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Icon(
-            imageVector = stat.icon,
-            contentDescription = null,
-            tint = stat.color,
-            modifier = Modifier.size(22.dp)
-        )
-        Spacer(modifier = Modifier.height(3.dp))
         Text(
-            text = stat.value,
+            text = "আমার অবদান",
             color = Ink,
             fontFamily = BanglaFamily,
             fontWeight = FontWeight.Bold,
-            fontSize = if (stat.value.length > 5) 14.sp else 17.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            fontSize = 15.sp,
+            modifier = Modifier.padding(start = 2.dp, top = 2.dp)
         )
-        Text(
-            text = stat.label,
-            color = InkMuted,
-            fontFamily = BanglaFamily,
-            fontSize = 10.sp,
-            lineHeight = 12.sp,
-            maxLines = 2,
-            textAlign = TextAlign.Center
-        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ContributionTile(
+                icon = Icons.Outlined.Description,
+                value = uiState.totalReports.toBanglaDigits(),
+                label = "আমার রিপোর্ট",
+                tint = VerifiedGreen,
+                onClick = onOpenReports,
+                modifier = Modifier.weight(1f)
+            )
+            ContributionTile(
+                icon = Icons.Outlined.TurnedInNot,
+                value = uiState.savedRouteCount.toBanglaDigits(),
+                label = "সেভ করা রুট",
+                tint = MetricBlue,
+                onClick = onOpenSavedRoutes,
+                modifier = Modifier.weight(1f)
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ContributionTile(
+                icon = Icons.Outlined.Timeline,
+                value = uiState.recentActivityCount.toBanglaDigits(),
+                label = "অ্যাক্টিভিটি",
+                tint = MetricPurple,
+                onClick = onOpenActivity,
+                modifier = Modifier.weight(1f)
+            )
+            ContributionTile(
+                icon = Icons.Outlined.EmojiEvents,
+                value = uiState.badgeCount.toBanglaDigits(),
+                label = "ব্যাজ",
+                tint = MetricAmber,
+                onClick = onOpenBadges,
+                modifier = Modifier.weight(1f)
+            )
+        }
     }
 }
 
 @Composable
-private fun SectionHeading(
-    text: String,
+private fun ContributionTile(
+    icon: ImageVector,
+    value: String,
+    label: String,
+    tint: Color,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Text(
-        text = text,
-        color = Ink,
-        fontFamily = BanglaFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 17.sp,
-        modifier = modifier.padding(start = 2.dp, top = 4.dp)
-    )
+    Surface(
+        onClick = onClick,
+        modifier = modifier,
+        color = CardWhite,
+        shape = RoundedCornerShape(14.dp),
+        border = BorderStroke(1.dp, FieldBorder),
+        shadowElevation = 1.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = 62.dp)
+                .padding(horizontal = 10.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(tint.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = tint,
+                    modifier = Modifier.size(17.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = value,
+                    color = Ink,
+                    fontFamily = BanglaFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp,
+                    maxLines = 1
+                )
+                Text(
+                    text = label,
+                    color = InkMuted,
+                    fontFamily = BanglaFamily,
+                    fontSize = 11.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
 }
 
+/** Collapsible card so settings stay one tap away without stretching the page. */
 @Composable
-private fun SectionCard(
+private fun ExpandableSection(
+    icon: ImageVector,
+    title: String,
+    summary: String,
+    isExpanded: Boolean,
+    onToggle: () -> Unit,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
+    val chevronRotation: Float by animateFloatAsState(
+        targetValue = if (isExpanded) 180f else 0f,
+        animationSpec = tween(durationMillis = 220),
+        label = "chevronRotation"
+    )
+
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = CardWhite,
@@ -619,7 +736,105 @@ private fun SectionCard(
         border = BorderStroke(1.dp, FieldBorder),
         shadowElevation = 1.dp
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) { content() }
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Surface(
+                onClick = onToggle,
+                modifier = Modifier.fillMaxWidth(),
+                color = Color.Transparent
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .defaultMinSize(minHeight = 56.dp)
+                        .padding(horizontal = 13.dp, vertical = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = BrandGreen,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = title,
+                            color = Ink,
+                            fontFamily = BanglaFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = summary,
+                            color = InkMuted,
+                            fontFamily = BanglaFamily,
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.Outlined.ExpandMore,
+                        contentDescription = null,
+                        tint = InkMuted,
+                        modifier = Modifier
+                            .size(22.dp)
+                            .rotate(chevronRotation)
+                    )
+                }
+            }
+
+            AnimatedVisibility(
+                visible = isExpanded,
+                enter = expandVertically(animationSpec = tween(220)) + fadeIn(tween(180)),
+                exit = shrinkVertically(animationSpec = tween(180)) + fadeOut(tween(120))
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    HorizontalDivider(color = FieldBorder)
+                    content()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LogoutButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        color = CardWhite,
+        shape = ProfileCardShape,
+        border = BorderStroke(1.dp, DangerRed.copy(alpha = 0.35f))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = 50.dp)
+                .padding(vertical = 12.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.Logout,
+                contentDescription = null,
+                tint = DangerRed,
+                modifier = Modifier.size(19.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "লগআউট",
+                color = DangerRed,
+                fontFamily = BanglaFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp
+            )
+        }
     }
 }
 
@@ -641,23 +856,23 @@ private fun ProfileRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .defaultMinSize(minHeight = 54.dp)
-                .padding(start = 15.dp, end = 11.dp, top = 10.dp, bottom = 10.dp),
+                .defaultMinSize(minHeight = 48.dp)
+                .padding(start = 15.dp, end = 11.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = iconTint,
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier.size(20.dp)
             )
-            Spacer(modifier = Modifier.width(14.dp))
+            Spacer(modifier = Modifier.width(13.dp))
             Text(
                 text = label,
                 color = labelColor,
                 fontFamily = BanglaFamily,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 14.sp,
+                fontSize = 13.sp,
                 modifier = Modifier.weight(1f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -667,7 +882,7 @@ private fun ProfileRow(
                     text = value,
                     color = InkMuted,
                     fontFamily = BanglaFamily,
-                    fontSize = 13.sp,
+                    fontSize = 12.sp,
                     maxLines = 1
                 )
                 Spacer(modifier = Modifier.width(6.dp))
@@ -676,7 +891,7 @@ private fun ProfileRow(
                 imageVector = Icons.Outlined.ChevronRight,
                 contentDescription = null,
                 tint = InkMuted,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(18.dp)
             )
         }
     }
@@ -685,7 +900,7 @@ private fun ProfileRow(
 @Composable
 private fun RowDivider(modifier: Modifier = Modifier) {
     HorizontalDivider(
-        modifier = modifier.padding(start = 51.dp),
+        modifier = modifier.padding(start = 48.dp),
         color = FieldBorder
     )
 }

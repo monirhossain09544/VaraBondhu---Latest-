@@ -17,6 +17,7 @@ data class ProfileUiState(
     val averageRating: String = "৪.৮",
     val communityRank: String = "শীর্ষ ১২%",
     val savedRouteCount: Int = 6,
+    val recentActivityCount: Int = 18,
     val badgeCount: Int = 4,
     val hasNotificationsEnabled: Boolean = true
 )
