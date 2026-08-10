@@ -1,6 +1,7 @@
 package com.rork.varabondhu.location
 
 import android.content.Context
+import android.location.Location
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mapbox.geojson.Point
@@ -12,6 +13,7 @@ import com.mapbox.search.SearchEngine
 import com.mapbox.search.SearchEngineSettings
 import com.mapbox.search.autocomplete.PlaceAutocomplete
 import com.mapbox.search.autocomplete.PlaceAutocompleteSuggestion
+import com.mapbox.search.common.IsoCountryCode
 import com.mapbox.search.result.SearchResult
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -178,7 +180,12 @@ class LocationViewModel : ViewModel() {
         if (_uiState.value.isLoadingNearby) return
         viewModelScope.launch {
             _uiState.update { state: LocationUiState ->
-                state.copy(isLoadingNearby = true, errorMessage = null)
+                state.copy(
+                    nearbyPlaces = emptyList(),
+                    currentDevicePlace = null,
+                    isLoadingNearby = true,
+                    errorMessage = null
+                )
             }
             val location = DeviceLocationProvider.currentLocation(context)
             if (location == null) {
@@ -208,22 +215,39 @@ class LocationViewModel : ViewModel() {
                 CategorySearchOptions(
                     proximity = point,
                     origin = point,
-                    limit = 8,
-                    ensureResultsPerCategory = true
+                    countries = listOf(IsoCountryCode("BD")),
+                    limit = 20,
+                    ensureResultsPerCategory = false
                 ),
                 object : SearchCallback {
                     override fun onResults(results: List<SearchResult>, responseInfo: ResponseInfo) {
                         val places = results
-                            .map { result: SearchResult ->
-                                LocationPlace(
-                                    name = result.name,
-                                    address = (result.fullAddress ?: result.name).ifBlank { result.name },
-                                    latitude = result.coordinate.latitude(),
-                                    longitude = result.coordinate.longitude()
+                            .mapNotNull { result: SearchResult ->
+                                val distanceMeters = distanceMeters(
+                                    from = point,
+                                    to = result.coordinate
                                 )
+                                if (distanceMeters > MAX_NEARBY_DISTANCE_METERS) {
+                                    null
+                                } else {
+                                    NearbyPlace(
+                                        place = LocationPlace(
+                                            name = result.name,
+                                            address = (result.fullAddress ?: result.name)
+                                                .ifBlank { result.name },
+                                            latitude = result.coordinate.latitude(),
+                                            longitude = result.coordinate.longitude()
+                                        ),
+                                        distanceMeters = distanceMeters
+                                    )
+                                }
                             }
-                            .distinctBy { place: LocationPlace -> place.name to place.address }
+                            .sortedBy(NearbyPlace::distanceMeters)
+                            .distinctBy { nearby: NearbyPlace ->
+                                nearby.place.name to nearby.place.address
+                            }
                             .take(6)
+                            .map(NearbyPlace::place)
                         _uiState.update { state: LocationUiState ->
                             state.copy(
                                 currentDevicePlace = currentPlace,
@@ -392,7 +416,25 @@ class LocationViewModel : ViewModel() {
         }
     }
 
+    private fun distanceMeters(from: Point, to: Point): Float {
+        val result = FloatArray(1)
+        Location.distanceBetween(
+            from.latitude(),
+            from.longitude(),
+            to.latitude(),
+            to.longitude(),
+            result
+        )
+        return result.first()
+    }
+
+    private data class NearbyPlace(
+        val place: LocationPlace,
+        val distanceMeters: Float
+    )
+
     private companion object {
         const val SEARCH_UNAVAILABLE = "স্থান খোঁজার সেবা এখন পাওয়া যাচ্ছে না।"
+        const val MAX_NEARBY_DISTANCE_METERS = 25_000f
     }
 }
