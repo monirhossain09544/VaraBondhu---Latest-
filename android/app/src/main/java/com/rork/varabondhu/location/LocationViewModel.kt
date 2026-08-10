@@ -1,20 +1,11 @@
 package com.rork.varabondhu.location
 
 import android.content.Context
-import android.location.Location
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mapbox.geojson.Point
-import com.mapbox.search.ApiType
-import com.mapbox.search.CategorySearchOptions
-import com.mapbox.search.ResponseInfo
-import com.mapbox.search.SearchCallback
-import com.mapbox.search.SearchEngine
-import com.mapbox.search.SearchEngineSettings
 import com.mapbox.search.autocomplete.PlaceAutocomplete
 import com.mapbox.search.autocomplete.PlaceAutocompleteSuggestion
-import com.mapbox.search.common.IsoCountryCode
-import com.mapbox.search.result.SearchResult
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -63,14 +54,6 @@ class LocationViewModel : ViewModel() {
      */
     private val placeAutocomplete: PlaceAutocomplete? by lazy {
         runCatching { PlaceAutocomplete.create() }.getOrNull()
-    }
-    private val nearbySearchEngine: SearchEngine? by lazy {
-        runCatching {
-            SearchEngine.createSearchEngineWithBuiltInDataProviders(
-                apiType = ApiType.SEARCH_BOX,
-                settings = SearchEngineSettings()
-            )
-        }.getOrNull()
     }
     private val _uiState = MutableStateFlow(LocationUiState())
     val uiState: StateFlow<LocationUiState> = _uiState.asStateFlow()
@@ -225,74 +208,28 @@ class LocationViewModel : ViewModel() {
                     }
                 }
             }
-            val engine = nearbySearchEngine
-            if (engine == null) {
-                _uiState.update { state: LocationUiState ->
-                    state.copy(
-                        isLoadingNearby = false,
-                        errorMessage = SEARCH_UNAVAILABLE
-                    )
+            val places = runCatching { MapboxNearbyService.nearbyPlaces(point) }
+                .getOrElse {
+                    _uiState.update { state: LocationUiState ->
+                        state.copy(
+                            isLoadingNearby = false,
+                            errorMessage = "আশেপাশের স্থান লোড করা যাচ্ছে না।"
+                        )
+                    }
+                    return@launch
                 }
-                return@launch
+            lastNearbyLoadTimeMillis = System.currentTimeMillis()
+            _uiState.update { state: LocationUiState ->
+                state.copy(
+                    nearbyPlaces = places,
+                    isLoadingNearby = false,
+                    errorMessage = if (places.isEmpty()) {
+                        "আশেপাশে কোনো পরিচিত স্থান পাওয়া যায়নি।"
+                    } else {
+                        null
+                    }
+                )
             }
-            engine.search(
-                listOf("bus_station", "railway_station", "market", "hospital", "landmark"),
-                CategorySearchOptions(
-                    proximity = point,
-                    origin = point,
-                    countries = listOf(IsoCountryCode("BD")),
-                    limit = 12,
-                    ensureResultsPerCategory = false
-                ),
-                object : SearchCallback {
-                    override fun onResults(results: List<SearchResult>, responseInfo: ResponseInfo) {
-                        val places = results
-                            .mapNotNull { result: SearchResult ->
-                                val distanceMeters = distanceMeters(
-                                    from = point,
-                                    to = result.coordinate
-                                )
-                                if (distanceMeters > MAX_NEARBY_DISTANCE_METERS) {
-                                    null
-                                } else {
-                                    NearbyPlace(
-                                        place = LocationPlace(
-                                            name = result.name,
-                                            address = (result.fullAddress ?: result.name)
-                                                .ifBlank { result.name },
-                                            latitude = result.coordinate.latitude(),
-                                            longitude = result.coordinate.longitude()
-                                        ),
-                                        distanceMeters = distanceMeters
-                                    )
-                                }
-                            }
-                            .sortedBy(NearbyPlace::distanceMeters)
-                            .distinctBy { nearby: NearbyPlace ->
-                                nearby.place.name to nearby.place.address
-                            }
-                            .take(6)
-                            .map(NearbyPlace::place)
-                        lastNearbyLoadTimeMillis = System.currentTimeMillis()
-                        _uiState.update { state: LocationUiState ->
-                            state.copy(
-                                nearbyPlaces = places,
-                                isLoadingNearby = false,
-                                errorMessage = if (places.isEmpty()) "আশেপাশে কোনো পরিচিত স্থান পাওয়া যায়নি।" else null
-                            )
-                        }
-                    }
-
-                    override fun onError(e: Exception) {
-                        _uiState.update { state: LocationUiState ->
-                            state.copy(
-                                isLoadingNearby = false,
-                                errorMessage = "আশেপাশের স্থান লোড করা যাচ্ছে না।"
-                            )
-                        }
-                    }
-                }
-            )
         }
     }
 
@@ -428,26 +365,8 @@ class LocationViewModel : ViewModel() {
         }
     }
 
-    private fun distanceMeters(from: Point, to: Point): Float {
-        val result = FloatArray(1)
-        Location.distanceBetween(
-            from.latitude(),
-            from.longitude(),
-            to.latitude(),
-            to.longitude(),
-            result
-        )
-        return result.first()
-    }
-
-    private data class NearbyPlace(
-        val place: LocationPlace,
-        val distanceMeters: Float
-    )
-
     private companion object {
         const val SEARCH_UNAVAILABLE = "স্থান খোঁজার সেবা এখন পাওয়া যাচ্ছে না।"
-        const val MAX_NEARBY_DISTANCE_METERS = 25_000f
         const val NEARBY_CACHE_MAX_AGE_MILLIS = 2 * 60 * 1_000L
     }
 }

@@ -5,6 +5,12 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+val mapboxPublicAccessToken: String = providers
+    .gradleProperty("MAPBOX_ACCESS_TOKEN")
+    .orElse(providers.environmentVariable("MAPBOX_ACCESS_TOKEN"))
+    .orElse("pk.eyJ1IjoibW9uaXJob3NzYWluMDk1NCIsImEiOiJjbXNscGh0eHAwNHV4MzFxdzByY2g0NjU0In0.uJ4ShndeNAdys5qiVHuwqw")
+    .get()
+
 android {
     namespace = "com.rork.varabondhu"
     compileSdk = 36
@@ -18,7 +24,7 @@ android {
         buildConfigField(
             "String",
             "MAPBOX_ACCESS_TOKEN",
-            "\"pk.eyJ1IjoibW9uaXJob3NzYWluMDk1NCIsImEiOiJjbXNscGh0eHAwNHV4MzFxdzByY2g0NjU0In0.uJ4ShndeNAdys5qiVHuwqw\""
+            "\"$mapboxPublicAccessToken\""
         )
 
         // The distributable APK targets modern physical Android devices only.
