@@ -5,7 +5,6 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,16 +20,20 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -40,12 +43,12 @@ import androidx.compose.ui.unit.sp
 import com.rork.varabondhu.ui.components.BrandLogo
 import com.rork.varabondhu.ui.components.VaraBondhuWordmark
 import com.rork.varabondhu.ui.localization.AppLanguage
-import com.rork.varabondhu.ui.localization.LocalizedText as Text
 import com.rork.varabondhu.ui.theme.BanglaFamily
 import com.rork.varabondhu.ui.theme.BrandGreen
 import com.rork.varabondhu.ui.theme.CardWhite
+import com.rork.varabondhu.ui.theme.FieldBorder
 import com.rork.varabondhu.ui.theme.Ink
-import com.rork.varabondhu.ui.theme.MintCanvas
+import com.rork.varabondhu.ui.theme.MintCanvasTop
 import com.rork.varabondhu.ui.theme.MintGlow
 
 @Composable
@@ -56,82 +59,121 @@ fun LanguageSelectionScreen(
     onNavigateBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val isBanglaSelected: Boolean = selectedLanguage == AppLanguage.BANGLA
+
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    listOf(Color(0xFFF2FFF6), MintCanvas, Color(0xFFFBFDFB))
+                    colors = listOf(MintCanvasTop, Color(0xFFF5FAF7), Color(0xFFFCFDFC))
                 )
             )
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
         if (onNavigateBack != null) {
-            IconButton(
-                onClick = onNavigateBack,
-                modifier = Modifier.padding(start = 8.dp, top = 4.dp)
+            Surface(
+                modifier = Modifier
+                    .padding(start = 16.dp, top = 8.dp)
+                    .size(44.dp),
+                shape = CircleShape,
+                color = CardWhite.copy(alpha = 0.9f),
+                border = BorderStroke(1.dp, FieldBorder),
+                shadowElevation = 1.dp
             ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                    contentDescription = "Back",
-                    tint = Ink
-                )
+                IconButton(onClick = onNavigateBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription = if (isBanglaSelected) "পেছনে যান" else "Go back",
+                        tint = Ink,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 22.dp, vertical = 28.dp),
+                .padding(horizontal = 24.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(if (onNavigateBack == null) 28.dp else 44.dp))
-            BrandLogo(height = 76.dp)
-            Spacer(modifier = Modifier.height(10.dp))
-            VaraBondhuWordmark(fontSize = 30.sp)
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(if (onNavigateBack == null) 40.dp else 54.dp))
+            BrandLogo(height = 68.dp)
+            Spacer(modifier = Modifier.height(8.dp))
+            VaraBondhuWordmark(fontSize = 29.sp)
+            Spacer(modifier = Modifier.height(48.dp))
+
             Text(
-                text = "Preferred language",
+                text = if (isBanglaSelected) "পছন্দের ভাষা" else "Preferred language",
                 color = Ink,
                 fontFamily = BanglaFamily,
-                fontWeight = FontWeight.Bold,
-                fontSize = 24.sp,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 25.sp,
+                lineHeight = 32.sp,
                 textAlign = TextAlign.Center
             )
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            LanguageCard(
-                title = "Bengali",
-                isSelected = selectedLanguage == AppLanguage.BANGLA,
-                onClick = { onSelectLanguage(AppLanguage.BANGLA) }
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            LanguageCard(
-                title = "English",
-                isSelected = selectedLanguage == AppLanguage.ENGLISH,
-                onClick = { onSelectLanguage(AppLanguage.ENGLISH) }
-            )
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(22.dp),
+                color = CardWhite,
+                border = BorderStroke(1.dp, FieldBorder),
+                shadowElevation = 2.dp
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    LanguageOption(
+                        title = "বাংলা",
+                        isSelected = isBanglaSelected,
+                        onClick = { onSelectLanguage(AppLanguage.BANGLA) },
+                        modifier = Modifier.clip(
+                            RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp)
+                        )
+                    )
+                    Divider(
+                        color = FieldBorder.copy(alpha = 0.85f),
+                        thickness = 1.dp,
+                        modifier = Modifier.padding(horizontal = 18.dp)
+                    )
+                    LanguageOption(
+                        title = "English",
+                        isSelected = !isBanglaSelected,
+                        onClick = { onSelectLanguage(AppLanguage.ENGLISH) },
+                        modifier = Modifier.clip(
+                            RoundedCornerShape(bottomStart = 22.dp, bottomEnd = 22.dp)
+                        )
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.weight(1f))
             Button(
                 onClick = onContinue,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(54.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = BrandGreen)
+                    .height(56.dp),
+                shape = RoundedCornerShape(18.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = BrandGreen),
+                elevation = ButtonDefaults.buttonElevation(
+                    defaultElevation = 0.dp,
+                    pressedElevation = 0.dp
+                )
             ) {
                 Text(
-                    text = if (selectedLanguage == AppLanguage.BANGLA) {
-                        "বাংলায় চালিয়ে যান"
-                    } else {
-                        "Continue in English"
-                    },
+                    text = if (isBanglaSelected) "বাংলায় চালিয়ে যান" else "Continue in English",
                     color = Color.White,
                     fontFamily = BanglaFamily,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     fontSize = 16.sp
+                )
+                Spacer(modifier = Modifier.size(8.dp))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(19.dp)
                 )
             }
         }
@@ -139,60 +181,59 @@ fun LanguageSelectionScreen(
 }
 
 @Composable
-private fun LanguageCard(
+private fun LanguageOption(
     title: String,
     isSelected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val borderColor by animateColorAsState(
-        targetValue = if (isSelected) BrandGreen else Color(0xFFDDE5DF),
+    val rowColor: Color by animateColorAsState(
+        targetValue = if (isSelected) MintGlow.copy(alpha = 0.78f) else CardWhite,
         animationSpec = spring(),
-        label = "language-border"
+        label = "language-row"
     )
-    val backgroundColor by animateColorAsState(
-        targetValue = if (isSelected) MintGlow else CardWhite,
+    val indicatorColor: Color by animateColorAsState(
+        targetValue = if (isSelected) BrandGreen else Color(0xFFD4DDD7),
         animationSpec = spring(),
-        label = "language-background"
+        label = "language-indicator"
     )
-    Surface(
+
+    Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        color = backgroundColor,
-        shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(if (isSelected) 2.dp else 1.dp, borderColor),
-        shadowElevation = if (isSelected) 3.dp else 0.dp
+            .background(rowColor)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 18.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        Text(
+            text = title,
+            color = Ink,
+            fontFamily = BanglaFamily,
+            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+            fontSize = 18.sp,
+            lineHeight = 25.sp,
+            modifier = Modifier.weight(1f)
+        )
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .background(indicatorColor, CircleShape),
+            contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = title,
-                color = Ink,
-                fontFamily = BanglaFamily,
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                modifier = Modifier.weight(1f)
-            )
-            Surface(
-                color = if (isSelected) BrandGreen else Color.Transparent,
-                shape = CircleShape,
-                border = BorderStroke(1.5.dp, borderColor),
-                modifier = Modifier.size(26.dp)
-            ) {
-                if (isSelected) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Rounded.Check,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(17.dp)
-                        )
-                    }
-                }
+            if (isSelected) {
+                Icon(
+                    imageVector = Icons.Rounded.Check,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp)
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(18.dp)
+                        .background(CardWhite, CircleShape)
+                )
             }
         }
     }
