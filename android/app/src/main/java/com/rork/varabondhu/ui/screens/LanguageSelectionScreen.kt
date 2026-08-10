@@ -22,7 +22,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -46,7 +45,6 @@ import com.rork.varabondhu.ui.theme.BanglaFamily
 import com.rork.varabondhu.ui.theme.BrandGreen
 import com.rork.varabondhu.ui.theme.CardWhite
 import com.rork.varabondhu.ui.theme.Ink
-import com.rork.varabondhu.ui.theme.InkMuted
 import com.rork.varabondhu.ui.theme.MintCanvas
 import com.rork.varabondhu.ui.theme.MintGlow
 
@@ -92,54 +90,25 @@ fun LanguageSelectionScreen(
             BrandLogo(height = 76.dp)
             Spacer(modifier = Modifier.height(10.dp))
             VaraBondhuWordmark(fontSize = 30.sp)
-            Spacer(modifier = Modifier.height(34.dp))
-
-            Surface(
-                color = BrandGreen,
-                shape = CircleShape,
-                modifier = Modifier.size(46.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Rounded.Language,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(40.dp))
             Text(
-                text = "পছন্দের ভাষা বেছে নিন",
+                text = "Preferred language",
                 color = Ink,
                 fontFamily = BanglaFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 24.sp,
                 textAlign = TextAlign.Center
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "আপনি যেকোনো সময় প্রোফাইল থেকে ভাষা পরিবর্তন করতে পারবেন",
-                color = InkMuted,
-                fontFamily = BanglaFamily,
-                fontSize = 14.sp,
-                lineHeight = 21.sp,
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(30.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
             LanguageCard(
-                title = "বাংলা",
-                subtitle = "বাংলায় ব্যবহার করুন",
-                sample = "আপনার যাত্রা হোক সহজ",
+                title = "Bengali",
                 isSelected = selectedLanguage == AppLanguage.BANGLA,
                 onClick = { onSelectLanguage(AppLanguage.BANGLA) }
             )
             Spacer(modifier = Modifier.height(12.dp))
             LanguageCard(
                 title = "English",
-                subtitle = "Use the app in English",
-                sample = "Make every journey simple",
                 isSelected = selectedLanguage == AppLanguage.ENGLISH,
                 onClick = { onSelectLanguage(AppLanguage.ENGLISH) }
             )
@@ -172,8 +141,6 @@ fun LanguageSelectionScreen(
 @Composable
 private fun LanguageCard(
     title: String,
-    subtitle: String,
-    sample: String,
     isSelected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -202,28 +169,14 @@ private fun LanguageCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    color = Ink,
-                    fontFamily = BanglaFamily,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
-                )
-                Text(
-                    text = subtitle,
-                    color = InkMuted,
-                    fontFamily = BanglaFamily,
-                    fontSize = 13.sp
-                )
-                Text(
-                    text = sample,
-                    color = BrandGreen,
-                    fontFamily = BanglaFamily,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-            }
+            Text(
+                text = title,
+                color = Ink,
+                fontFamily = BanglaFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                modifier = Modifier.weight(1f)
+            )
             Surface(
                 color = if (isSelected) BrandGreen else Color.Transparent,
                 shape = CircleShape,
