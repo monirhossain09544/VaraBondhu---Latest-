@@ -99,6 +99,26 @@ class LocationViewModel : ViewModel() {
         searchJob = viewModelScope.launch {
             delay(SEARCH_DEBOUNCE_MILLIS)
             val trimmedQuery: String = query.trim()
+            val curatedPlaces: List<LocationPlace> = CuratedBangladeshPlaceSearch.search(trimmedQuery)
+            if (curatedPlaces.isNotEmpty()) {
+                searchSelections = curatedPlaces.map(SearchSelection::Direct)
+                _uiState.update { state: LocationUiState ->
+                    if (state.query.trim() != trimmedQuery) {
+                        state
+                    } else {
+                        state.copy(
+                            suggestions = searchSelections.mapIndexed { index: Int, selection: SearchSelection ->
+                                LocationSuggestion(
+                                    id = index,
+                                    name = selection.name,
+                                    address = selection.address
+                                )
+                            },
+                            errorMessage = null
+                        )
+                    }
+                }
+            }
             val proximity: Point = _uiState.value.currentDevicePlace?.point
                 ?.takeIf(::isWithinBangladeshSearchBounds)
                 ?: BANGLADESH_SEARCH_CENTER
@@ -132,7 +152,7 @@ class LocationViewModel : ViewModel() {
 
             searchSelections = mergeSearchResults(
                 mapboxSuggestions = mapboxSuggestions,
-                fallbackPlaces = fallbackPlaces
+                fallbackPlaces = curatedPlaces + fallbackPlaces
             )
             val didEveryProviderFail: Boolean =
                 (search == null || mapboxResult?.isFailure == true || mapboxResponse?.isError == true) &&
