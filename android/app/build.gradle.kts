@@ -21,17 +21,17 @@ android {
             "\"pk.eyJ1IjoibW9uaXJob3NzYWluMDk1NCIsImEiOiJjbXNscGh0eHAwNHV4MzFxdzByY2g0NjU0In0.uJ4ShndeNAdys5qiVHuwqw\""
         )
 
-        // The Mapbox native libraries cannot be stripped in this build environment,
-        // so unused ABIs would triple the APK size and break installation.
-        // arm64-v8a covers modern devices, x86_64 covers emulators.
+        // The distributable APK targets modern physical Android devices only.
+        // Excluding x86_64 prevents emulator-only Mapbox binaries from doubling its size.
         ndk {
-            abiFilters += listOf("arm64-v8a", "x86_64")
+            abiFilters += "arm64-v8a"
         }
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
