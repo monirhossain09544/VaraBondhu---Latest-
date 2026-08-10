@@ -229,7 +229,7 @@ private fun LocationListPicker(
             ) {
                 if (state.query.isNotBlank()) {
                     item(key = "search-heading") {
-                        SectionLabel("সার্চের ফলাফল")
+                        SectionLabel("বাংলাদেশে সার্চের ফলাফল")
                     }
                     if (state.suggestions.isNotEmpty()) {
                         items(state.suggestions, key = LocationSuggestion::id) { suggestion: LocationSuggestion ->
@@ -363,7 +363,7 @@ private fun SearchField(
         singleLine = true,
         placeholder = {
             Text(
-                text = "এলাকা, রাস্তা বা ল্যান্ডমার্ক লিখুন",
+                text = "বাংলাদেশের এলাকা, রাস্তা বা ল্যান্ডমার্ক লিখুন",
                 fontFamily = BanglaFamily,
                 fontSize = 13.sp,
                 color = FieldPlaceholder,

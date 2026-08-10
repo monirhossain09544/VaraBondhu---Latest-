@@ -3,9 +3,12 @@ package com.rork.varabondhu.location
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mapbox.geojson.BoundingBox
 import com.mapbox.geojson.Point
 import com.mapbox.search.autocomplete.PlaceAutocomplete
+import com.mapbox.search.autocomplete.PlaceAutocompleteOptions
 import com.mapbox.search.autocomplete.PlaceAutocompleteSuggestion
+import com.mapbox.search.common.IsoCountryCode
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -103,8 +106,11 @@ class LocationViewModel : ViewModel() {
             }
             val response = search.suggestions(
                 query = query.trim(),
+                region = BANGLADESH_BOUNDS,
                 proximity = _uiState.value.currentDevicePlace?.point
-                    ?: Point.fromLngLat(90.4125, 23.8103)
+                    ?.takeIf(::isWithinBangladeshSearchBounds)
+                    ?: BANGLADESH_SEARCH_CENTER,
+                options = BANGLADESH_AUTOCOMPLETE_OPTIONS
             )
             if (response.isValue) {
                 rawSuggestions = response.value.orEmpty()
@@ -139,7 +145,7 @@ class LocationViewModel : ViewModel() {
             _uiState.update { state: LocationUiState -> state.copy(isSearching = true, errorMessage = null) }
             val response = search.select(suggestion)
             val result = response.value
-            if (response.isValue && result != null) {
+            if (response.isValue && result != null && isWithinBangladeshSearchBounds(result.coordinate)) {
                 commitPlace(
                     LocationPlace(
                         name = result.name,
@@ -150,7 +156,10 @@ class LocationViewModel : ViewModel() {
                 )
             } else {
                 _uiState.update { state: LocationUiState ->
-                    state.copy(isSearching = false, errorMessage = "স্থানটি নির্বাচন করা যায়নি।")
+                    state.copy(
+                        isSearching = false,
+                        errorMessage = "শুধু বাংলাদেশের ভেতরের লোকেশন নির্বাচন করুন।"
+                    )
                 }
             }
         }
@@ -286,6 +295,15 @@ class LocationViewModel : ViewModel() {
     }
 
     private fun resolvePoint(point: Point, shouldCommit: Boolean) {
+        if (!isWithinBangladeshSearchBounds(point)) {
+            _uiState.update { state: LocationUiState ->
+                state.copy(
+                    isResolvingPoint = false,
+                    errorMessage = "শুধু বাংলাদেশের ভেতরের লোকেশন নির্বাচন করুন।"
+                )
+            }
+            return
+        }
         viewModelScope.launch {
             _uiState.update { state: LocationUiState ->
                 state.copy(isResolvingPoint = true, suggestions = emptyList(), errorMessage = null)
@@ -365,8 +383,28 @@ class LocationViewModel : ViewModel() {
         }
     }
 
+    private fun isWithinBangladeshSearchBounds(point: Point): Boolean =
+        point.longitude() in BANGLADESH_WEST..BANGLADESH_EAST &&
+            point.latitude() in BANGLADESH_SOUTH..BANGLADESH_NORTH
+
     private companion object {
         const val SEARCH_UNAVAILABLE = "স্থান খোঁজার সেবা এখন পাওয়া যাচ্ছে না।"
         const val NEARBY_CACHE_MAX_AGE_MILLIS = 2 * 60 * 1_000L
+        const val BANGLADESH_WEST = 88.0
+        const val BANGLADESH_SOUTH = 20.5
+        const val BANGLADESH_EAST = 92.7
+        const val BANGLADESH_NORTH = 26.7
+        val BANGLADESH_SEARCH_CENTER: Point = Point.fromLngLat(90.3563, 23.6850)
+        val BANGLADESH_BOUNDS: BoundingBox = BoundingBox.fromLngLats(
+            BANGLADESH_WEST,
+            BANGLADESH_SOUTH,
+            BANGLADESH_EAST,
+            BANGLADESH_NORTH
+        )
+        val BANGLADESH_AUTOCOMPLETE_OPTIONS: PlaceAutocompleteOptions =
+            PlaceAutocompleteOptions(
+                limit = 10,
+                countries = listOf(IsoCountryCode("BD"))
+            )
     }
 }
