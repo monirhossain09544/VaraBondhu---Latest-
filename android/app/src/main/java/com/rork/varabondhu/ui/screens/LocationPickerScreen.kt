@@ -229,7 +229,7 @@ private fun LocationListPicker(
             ) {
                 if (state.query.isNotBlank()) {
                     item(key = "search-heading") {
-                        SectionLabel("বাংলাদেশে সার্চের ফলাফল")
+                        SectionLabel("বাংলাদেশে সার্চের ফলাফল · © OpenStreetMap")
                     }
                     if (state.suggestions.isNotEmpty()) {
                         items(state.suggestions, key = LocationSuggestion::id) { suggestion: LocationSuggestion ->

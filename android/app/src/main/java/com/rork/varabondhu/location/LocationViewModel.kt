@@ -10,6 +10,7 @@ import com.mapbox.search.autocomplete.PlaceAutocompleteOptions
 import com.mapbox.search.autocomplete.PlaceAutocompleteSuggestion
 import com.mapbox.search.common.IsoCountryCode
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -61,13 +62,13 @@ class LocationViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(LocationUiState())
     val uiState: StateFlow<LocationUiState> = _uiState.asStateFlow()
 
-    private var rawSuggestions: List<PlaceAutocompleteSuggestion> = emptyList()
+    private var searchSelections: List<SearchSelection> = emptyList()
     private var searchJob: Job? = null
     private var lastNearbyLoadTimeMillis: Long = 0L
 
     fun beginSelection(target: LocationTarget) {
         searchJob?.cancel()
-        rawSuggestions = emptyList()
+        searchSelections = emptyList()
         _uiState.update { state: LocationUiState ->
             val selected = if (target == LocationTarget.ORIGIN) state.origin else state.destination
             state.copy(
@@ -84,7 +85,7 @@ class LocationViewModel : ViewModel() {
 
     fun updateQuery(query: String) {
         searchJob?.cancel()
-        rawSuggestions = emptyList()
+        searchSelections = emptyList()
         _uiState.update { state: LocationUiState ->
             state.copy(
                 query = query,
@@ -96,51 +97,81 @@ class LocationViewModel : ViewModel() {
         if (query.trim().length < 2) return
 
         searchJob = viewModelScope.launch {
-            delay(350)
+            delay(SEARCH_DEBOUNCE_MILLIS)
+            val trimmedQuery: String = query.trim()
+            val proximity: Point = _uiState.value.currentDevicePlace?.point
+                ?.takeIf(::isWithinBangladeshSearchBounds)
+                ?: BANGLADESH_SEARCH_CENTER
             val search = placeAutocomplete
-            if (search == null) {
-                _uiState.update { state: LocationUiState ->
-                    state.copy(isSearching = false, errorMessage = SEARCH_UNAVAILABLE)
+            val mapboxRequest = search?.let { activeSearch: PlaceAutocomplete ->
+                async {
+                    runCatching {
+                        activeSearch.suggestions(
+                            query = trimmedQuery,
+                            region = BANGLADESH_BOUNDS,
+                            proximity = proximity,
+                            options = BANGLADESH_AUTOCOMPLETE_OPTIONS
+                        )
+                    }
                 }
-                return@launch
             }
-            val response = search.suggestions(
-                query = query.trim(),
-                region = BANGLADESH_BOUNDS,
-                proximity = _uiState.value.currentDevicePlace?.point
-                    ?.takeIf(::isWithinBangladeshSearchBounds)
-                    ?: BANGLADESH_SEARCH_CENTER,
-                options = BANGLADESH_AUTOCOMPLETE_OPTIONS
+            val fallbackRequest = async {
+                runCatching {
+                    BangladeshPlaceSearchService.search(
+                        query = trimmedQuery,
+                        proximity = proximity
+                    )
+                }
+            }
+            val mapboxResult = mapboxRequest?.await()
+            val mapboxResponse = mapboxResult?.getOrNull()
+            val fallbackResult = fallbackRequest.await()
+            val mapboxSuggestions: List<PlaceAutocompleteSuggestion> =
+                mapboxResponse?.value.orEmpty()
+            val fallbackPlaces: List<LocationPlace> = fallbackResult.getOrDefault(emptyList())
+
+            searchSelections = mergeSearchResults(
+                mapboxSuggestions = mapboxSuggestions,
+                fallbackPlaces = fallbackPlaces
             )
-            if (response.isValue) {
-                rawSuggestions = response.value.orEmpty()
-                _uiState.update { state: LocationUiState ->
-                    state.copy(
-                        suggestions = rawSuggestions.mapIndexed { index, suggestion ->
-                            LocationSuggestion(
-                                id = index,
-                                name = suggestion.name,
-                                address = suggestion.formattedAddress.orEmpty()
-                            )
-                        },
-                        isSearching = false,
-                        errorMessage = if (rawSuggestions.isEmpty()) "কোনো স্থান পাওয়া যায়নি" else null
-                    )
-                }
-            } else {
-                _uiState.update { state: LocationUiState ->
-                    state.copy(
-                        isSearching = false,
-                        errorMessage = "স্থান খোঁজা যাচ্ছে না। আবার চেষ্টা করুন।"
-                    )
-                }
+            val didEveryProviderFail: Boolean =
+                (search == null || mapboxResult?.isFailure == true || mapboxResponse?.isError == true) &&
+                    fallbackResult.isFailure
+            _uiState.update { state: LocationUiState ->
+                state.copy(
+                    suggestions = searchSelections.mapIndexed { index: Int, selection: SearchSelection ->
+                        LocationSuggestion(
+                            id = index,
+                            name = selection.name,
+                            address = selection.address
+                        )
+                    },
+                    isSearching = false,
+                    errorMessage = when {
+                        searchSelections.isNotEmpty() -> null
+                        didEveryProviderFail -> "স্থান খোঁজা যাচ্ছে না। আবার চেষ্টা করুন।"
+                        else -> "কোনো স্থান পাওয়া যায়নি"
+                    }
+                )
             }
         }
     }
 
     fun selectSuggestion(suggestionId: Int) {
-        val suggestion = rawSuggestions.getOrNull(suggestionId) ?: return
-        val search = placeAutocomplete ?: return
+        when (val selection: SearchSelection = searchSelections.getOrNull(suggestionId) ?: return) {
+            is SearchSelection.Direct -> commitPlace(selection.place)
+            is SearchSelection.Mapbox -> selectMapboxSuggestion(selection.suggestion)
+        }
+    }
+
+    private fun selectMapboxSuggestion(suggestion: PlaceAutocompleteSuggestion) {
+        val search = placeAutocomplete
+        if (search == null) {
+            _uiState.update { state: LocationUiState ->
+                state.copy(isSearching = false, errorMessage = SEARCH_UNAVAILABLE)
+            }
+            return
+        }
         viewModelScope.launch {
             _uiState.update { state: LocationUiState -> state.copy(isSearching = true, errorMessage = null) }
             val response = search.select(suggestion)
@@ -359,7 +390,7 @@ class LocationViewModel : ViewModel() {
     }
 
     private fun commitPlace(place: LocationPlace) {
-        rawSuggestions = emptyList()
+        searchSelections = emptyList()
         _uiState.update { state: LocationUiState ->
             if (state.activeTarget == LocationTarget.ORIGIN) {
                 state.copy(
@@ -383,12 +414,47 @@ class LocationViewModel : ViewModel() {
         }
     }
 
+    private fun mergeSearchResults(
+        mapboxSuggestions: List<PlaceAutocompleteSuggestion>,
+        fallbackPlaces: List<LocationPlace>
+    ): List<SearchSelection> =
+        (fallbackPlaces.map(SearchSelection::Direct) +
+            mapboxSuggestions.map(SearchSelection::Mapbox))
+            .distinctBy { selection: SearchSelection ->
+                "${selection.name.normalizedSearchText()}|${selection.address.normalizedSearchText()}"
+            }
+            .take(MAX_SEARCH_RESULTS)
+
+    private fun String.normalizedSearchText(): String =
+        lowercase().filter { character: Char -> character.isLetterOrDigit() }
+
     private fun isWithinBangladeshSearchBounds(point: Point): Boolean =
         point.longitude() in BANGLADESH_WEST..BANGLADESH_EAST &&
             point.latitude() in BANGLADESH_SOUTH..BANGLADESH_NORTH
 
+    private sealed interface SearchSelection {
+        val name: String
+        val address: String
+
+        data class Mapbox(
+            val suggestion: PlaceAutocompleteSuggestion
+        ) : SearchSelection {
+            override val name: String = suggestion.name
+            override val address: String = suggestion.formattedAddress.orEmpty()
+        }
+
+        data class Direct(
+            val place: LocationPlace
+        ) : SearchSelection {
+            override val name: String = place.name
+            override val address: String = place.address
+        }
+    }
+
     private companion object {
         const val SEARCH_UNAVAILABLE = "স্থান খোঁজার সেবা এখন পাওয়া যাচ্ছে না।"
+        const val SEARCH_DEBOUNCE_MILLIS = 550L
+        const val MAX_SEARCH_RESULTS = 10
         const val NEARBY_CACHE_MAX_AGE_MILLIS = 2 * 60 * 1_000L
         const val BANGLADESH_WEST = 88.0
         const val BANGLADESH_SOUTH = 20.5

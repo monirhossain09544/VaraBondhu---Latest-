@@ -265,6 +265,7 @@ private val EnglishCopy: Map<String, String> = mapOf(
     "বাংলাদেশের এলাকা, রাস্তা বা ল্যান্ডমার্ক লিখুন" to "Enter an area, road or landmark in Bangladesh",
     "সার্চের ফলাফল" to "Search results",
     "বাংলাদেশে সার্চের ফলাফল" to "Search results in Bangladesh",
+    "বাংলাদেশে সার্চের ফলাফল · © OpenStreetMap" to "Search results in Bangladesh · © OpenStreetMap",
     "কমপক্ষে দুইটি অক্ষর লিখুন" to "Enter at least two characters",
     "বর্তমান লোকেশন" to "Current location",
     "আশেপাশের লোকেশন" to "Nearby locations",
