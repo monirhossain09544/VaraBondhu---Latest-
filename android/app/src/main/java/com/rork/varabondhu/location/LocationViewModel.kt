@@ -77,6 +77,7 @@ class LocationViewModel : ViewModel() {
 
     private var rawSuggestions: List<PlaceAutocompleteSuggestion> = emptyList()
     private var searchJob: Job? = null
+    private var lastNearbyLoadTimeMillis: Long = 0L
 
     fun beginSelection(target: LocationTarget) {
         searchJob?.cancel()
@@ -177,12 +178,16 @@ class LocationViewModel : ViewModel() {
     }
 
     fun loadNearbyPlaces(context: Context) {
-        if (_uiState.value.isLoadingNearby) return
+        val currentState = _uiState.value
+        if (currentState.isLoadingNearby) return
+        val hasRecentNearbyResults = currentState.currentDevicePlace != null &&
+            currentState.nearbyPlaces.isNotEmpty() &&
+            System.currentTimeMillis() - lastNearbyLoadTimeMillis <= NEARBY_CACHE_MAX_AGE_MILLIS
+        if (hasRecentNearbyResults) return
         viewModelScope.launch {
             _uiState.update { state: LocationUiState ->
                 state.copy(
                     nearbyPlaces = emptyList(),
-                    currentDevicePlace = null,
                     isLoadingNearby = true,
                     errorMessage = null
                 )
@@ -198,12 +203,32 @@ class LocationViewModel : ViewModel() {
                 return@launch
             }
             val point = Point.fromLngLat(location.longitude, location.latitude)
-            val currentPlace = resolvePlace(point, "আপনার বর্তমান অবস্থান")
+            val provisionalCurrentPlace = LocationPlace(
+                name = "আপনার বর্তমান অবস্থান",
+                address = "আপনার বর্তমান অবস্থান",
+                latitude = point.latitude(),
+                longitude = point.longitude()
+            )
+            _uiState.update { state: LocationUiState ->
+                state.copy(currentDevicePlace = provisionalCurrentPlace)
+            }
+            viewModelScope.launch {
+                val resolvedPlace = resolvePlace(point, provisionalCurrentPlace.name)
+                _uiState.update { state: LocationUiState ->
+                    val activePlace = state.currentDevicePlace
+                    if (activePlace?.latitude == point.latitude() &&
+                        activePlace.longitude == point.longitude()
+                    ) {
+                        state.copy(currentDevicePlace = resolvedPlace)
+                    } else {
+                        state
+                    }
+                }
+            }
             val engine = nearbySearchEngine
             if (engine == null) {
                 _uiState.update { state: LocationUiState ->
                     state.copy(
-                        currentDevicePlace = currentPlace,
                         isLoadingNearby = false,
                         errorMessage = SEARCH_UNAVAILABLE
                     )
@@ -211,12 +236,12 @@ class LocationViewModel : ViewModel() {
                 return@launch
             }
             engine.search(
-                listOf("bus_station", "railway_station", "shopping_mall", "market", "hospital", "landmark"),
+                listOf("bus_station", "railway_station", "market", "hospital", "landmark"),
                 CategorySearchOptions(
                     proximity = point,
                     origin = point,
                     countries = listOf(IsoCountryCode("BD")),
-                    limit = 20,
+                    limit = 12,
                     ensureResultsPerCategory = false
                 ),
                 object : SearchCallback {
@@ -248,9 +273,9 @@ class LocationViewModel : ViewModel() {
                             }
                             .take(6)
                             .map(NearbyPlace::place)
+                        lastNearbyLoadTimeMillis = System.currentTimeMillis()
                         _uiState.update { state: LocationUiState ->
                             state.copy(
-                                currentDevicePlace = currentPlace,
                                 nearbyPlaces = places,
                                 isLoadingNearby = false,
                                 errorMessage = if (places.isEmpty()) "আশেপাশে কোনো পরিচিত স্থান পাওয়া যায়নি।" else null
@@ -261,7 +286,6 @@ class LocationViewModel : ViewModel() {
                     override fun onError(e: Exception) {
                         _uiState.update { state: LocationUiState ->
                             state.copy(
-                                currentDevicePlace = currentPlace,
                                 isLoadingNearby = false,
                                 errorMessage = "আশেপাশের স্থান লোড করা যাচ্ছে না।"
                             )
@@ -316,17 +340,11 @@ class LocationViewModel : ViewModel() {
         val search = placeAutocomplete
         val response = search?.reverse(point)
         val suggestion = response?.value?.firstOrNull()
-        val selectedResult = suggestion?.let { resultSuggestion: PlaceAutocompleteSuggestion ->
-            search.select(resultSuggestion).value
-        }
         return LocationPlace(
-            name = selectedResult?.name ?: suggestion?.name ?: fallbackName,
-            address = selectedResult?.address?.formattedAddress
-                ?.takeIf(String::isNotBlank)
-                ?: suggestion?.formattedAddress?.takeIf(String::isNotBlank)
-                ?: fallbackName,
-            latitude = selectedResult?.coordinate?.latitude() ?: point.latitude(),
-            longitude = selectedResult?.coordinate?.longitude() ?: point.longitude()
+            name = suggestion?.name?.takeIf(String::isNotBlank) ?: fallbackName,
+            address = suggestion?.formattedAddress?.takeIf(String::isNotBlank) ?: fallbackName,
+            latitude = point.latitude(),
+            longitude = point.longitude()
         )
     }
 
@@ -358,19 +376,13 @@ class LocationViewModel : ViewModel() {
             }
             val response = search.reverse(point)
             val suggestion = response.value?.firstOrNull()
-            val selectedResult = suggestion?.let { resultSuggestion: PlaceAutocompleteSuggestion ->
-                search.select(resultSuggestion).value
-            }
             val place = LocationPlace(
-                name = selectedResult?.name?.takeIf(String::isNotBlank)
-                    ?: suggestion?.name?.takeIf(String::isNotBlank)
+                name = suggestion?.name?.takeIf(String::isNotBlank)
                     ?: "ম্যাপে নির্বাচিত স্থান",
-                address = selectedResult?.address?.formattedAddress
-                    ?.takeIf(String::isNotBlank)
-                    ?: suggestion?.formattedAddress?.takeIf(String::isNotBlank)
+                address = suggestion?.formattedAddress?.takeIf(String::isNotBlank)
                     ?: "ম্যাপে নির্বাচিত স্থান",
-                latitude = selectedResult?.coordinate?.latitude() ?: point.latitude(),
-                longitude = selectedResult?.coordinate?.longitude() ?: point.longitude()
+                latitude = point.latitude(),
+                longitude = point.longitude()
             )
             if (shouldCommit) {
                 commitPlace(place)
@@ -436,5 +448,6 @@ class LocationViewModel : ViewModel() {
     private companion object {
         const val SEARCH_UNAVAILABLE = "স্থান খোঁজার সেবা এখন পাওয়া যাচ্ছে না।"
         const val MAX_NEARBY_DISTANCE_METERS = 25_000f
+        const val NEARBY_CACHE_MAX_AGE_MILLIS = 2 * 60 * 1_000L
     }
 }

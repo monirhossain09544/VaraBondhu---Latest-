@@ -251,7 +251,8 @@ private fun LocationListPicker(
                     item(key = "current-location") {
                         CurrentLocationRow(
                             currentPlace = state.currentDevicePlace,
-                            isLoading = state.isLoadingNearby || state.isResolvingPoint,
+                            isLoading = (state.currentDevicePlace == null && state.isLoadingNearby) ||
+                                state.isResolvingPoint,
                             onClick = requestCurrentLocation
                         )
                     }
