@@ -294,6 +294,13 @@ class LocationViewModel : ViewModel() {
     }
 
     fun useCurrentLocation(context: Context) {
+        _uiState.value.currentDevicePlace
+            ?.takeIf { place: LocationPlace -> isWithinBangladeshSearchBounds(place.point) }
+            ?.let { place: LocationPlace ->
+                commitPlace(place)
+                return
+            }
+
         viewModelScope.launch {
             _uiState.update { state: LocationUiState ->
                 state.copy(isResolvingPoint = true, errorMessage = null)
@@ -308,10 +315,29 @@ class LocationViewModel : ViewModel() {
                 }
                 return@launch
             }
-            resolvePoint(
-                point = Point.fromLngLat(location.longitude, location.latitude),
-                shouldCommit = true
+
+            val point: Point = Point.fromLngLat(location.longitude, location.latitude)
+            if (!isWithinBangladeshSearchBounds(point)) {
+                _uiState.update { state: LocationUiState ->
+                    state.copy(
+                        isResolvingPoint = false,
+                        errorMessage = "শুধু বাংলাদেশের ভেতরের লোকেশন নির্বাচন করুন।"
+                    )
+                }
+                return@launch
+            }
+
+            val fallbackPlace = LocationPlace(
+                name = "আপনার বর্তমান অবস্থান",
+                address = "আপনার বর্তমান অবস্থান",
+                latitude = point.latitude(),
+                longitude = point.longitude()
             )
+            val currentPlace: LocationPlace = runCatching {
+                resolvePlace(point = point, fallbackName = fallbackPlace.name)
+            }.getOrDefault(fallbackPlace)
+            _uiState.update { state: LocationUiState -> state.copy(currentDevicePlace = currentPlace) }
+            commitPlace(currentPlace)
         }
     }
 

@@ -1,0 +1,4 @@
+# Copy this file to local.properties and replace both placeholder values.
+# local.properties is intentionally ignored by Git.
+MAPBOX_DOWNLOADS_TOKEN=your_secret_downloads_token
+MAPBOX_ACCESS_TOKEN=your_public_runtime_token

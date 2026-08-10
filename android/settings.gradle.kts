@@ -1,3 +1,5 @@
+import java.util.Properties
+
 pluginManagement {
     repositories {
         google {
@@ -11,6 +13,14 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
+
+val localMapboxProperties: Properties = Properties().apply {
+    val localPropertiesFile = file("local.properties")
+    if (localPropertiesFile.isFile) {
+        localPropertiesFile.inputStream().use(::load)
+    }
+}
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
@@ -22,6 +32,7 @@ dependencyResolutionManagement {
                 username = "mapbox"
                 password = providers.gradleProperty("MAPBOX_DOWNLOADS_TOKEN").orNull
                     ?: System.getenv("MAPBOX_DOWNLOADS_TOKEN")
+                    ?: localMapboxProperties.getProperty("MAPBOX_DOWNLOADS_TOKEN")
                     ?: ""
             }
             authentication {

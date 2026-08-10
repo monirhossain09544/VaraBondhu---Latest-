@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,11 +7,16 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
-val mapboxPublicAccessToken: String = providers
-    .gradleProperty("MAPBOX_ACCESS_TOKEN")
-    .orElse(providers.environmentVariable("MAPBOX_ACCESS_TOKEN"))
-    .orElse("pk.eyJ1IjoibW9uaXJob3NzYWluMDk1NCIsImEiOiJjbXNscGh0eHAwNHV4MzFxdzByY2g0NjU0In0.uJ4ShndeNAdys5qiVHuwqw")
-    .get()
+val localMapboxProperties: Properties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.isFile) {
+        localPropertiesFile.inputStream().use(::load)
+    }
+}
+val mapboxPublicAccessToken: String = providers.gradleProperty("MAPBOX_ACCESS_TOKEN").orNull
+    ?: System.getenv("MAPBOX_ACCESS_TOKEN")
+    ?: localMapboxProperties.getProperty("MAPBOX_ACCESS_TOKEN")
+    ?: "pk.eyJ1IjoibW9uaXJob3NzYWluMDk1NCIsImEiOiJjbXNscGh0eHAwNHV4MzFxdzByY2g0NjU0In0.uJ4ShndeNAdys5qiVHuwqw"
 
 android {
     namespace = "com.rork.varabondhu"
