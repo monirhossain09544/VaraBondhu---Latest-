@@ -7,7 +7,6 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -108,7 +107,6 @@ private val BadgeGreen: Color = Color(0xFFE5F5E9)
 private val MetricBlue: Color = Color(0xFF386BC7)
 private val MetricAmber: Color = Color(0xFFF5A623)
 private val MetricPurple: Color = Color(0xFF6B3CC4)
-private val ProfileCardShape: RoundedCornerShape = RoundedCornerShape(16.dp)
 
 private enum class ProfileDialog {
     MY_REPORTS,
@@ -157,7 +155,7 @@ fun ProfileScreen(
                         text = "প্রোফাইল",
                         color = Ink,
                         fontFamily = BanglaFamily,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.SemiBold,
                         fontSize = 20.sp
                     )
                 },
@@ -196,8 +194,8 @@ fun ProfileScreen(
                     .fillMaxWidth()
                     .widthIn(max = 600.dp)
                     .verticalScroll(rememberScrollState())
-                    .padding(start = 10.dp, end = 10.dp, top = 2.dp, bottom = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                    .padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 28.dp),
+                verticalArrangement = Arrangement.spacedBy(22.dp)
             ) {
                 IdentityCard(uiState = uiState)
 
@@ -209,8 +207,12 @@ fun ProfileScreen(
                     onOpenBadges = { activeDialog = ProfileDialog.BADGES }
                 )
 
-                ProfileSectionHeading(text = "অ্যাকাউন্ট ও সেটিংস")
-                ProfileSectionCard {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    ProfileSectionHeading(text = "অ্যাকাউন্ট ও সেটিংস")
+                    ProfileSectionCard {
                     ProfileRow(
                         icon = Icons.Outlined.PersonOutline,
                         label = "প্রোফাইল সম্পাদনা",
@@ -231,11 +233,12 @@ fun ProfileScreen(
                         onClick = onNavigateToLanguage
                     )
                     RowDivider()
-                    ProfileRow(
-                        icon = Icons.AutoMirrored.Outlined.HelpOutline,
-                        label = "সহায়তা ও সাপোর্ট",
-                        onClick = { activeDialog = ProfileDialog.HELP }
-                    )
+                        ProfileRow(
+                            icon = Icons.AutoMirrored.Outlined.HelpOutline,
+                            label = "সহায়তা ও সাপোর্ট",
+                            onClick = { activeDialog = ProfileDialog.HELP }
+                        )
+                    }
                 }
 
                 ExpandableSection(
@@ -378,7 +381,7 @@ fun ProfileScreen(
     }
 }
 
-/** Identity, verification badge, trust score and the four headline stats in one card. */
+/** Airy identity header with verification, trust score, and headline stats. */
 @Composable
 private fun IdentityCard(
     uiState: ProfileUiState,
@@ -390,10 +393,7 @@ private fun IdentityCard(
 
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            color = CardWhite,
-            shape = ProfileCardShape,
-            border = BorderStroke(1.dp, FieldBorder),
-            shadowElevation = 1.dp
+            color = Color.Transparent
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Row(
@@ -434,7 +434,7 @@ private fun IdentityCard(
                             text = uiState.name,
                             color = Ink,
                             fontFamily = BanglaFamily,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.SemiBold,
                             fontSize = if (isCompact) 16.sp else 18.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -501,9 +501,14 @@ private fun IdentityCard(
                     }
                 }
 
-                HorizontalDivider(color = FieldBorder)
+                Spacer(modifier = Modifier.height(4.dp))
 
-                StatsRow(uiState = uiState)
+                StatsRow(
+                    uiState = uiState,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(MintGlow.copy(alpha = 0.72f))
+                )
             }
         }
     }
@@ -582,7 +587,7 @@ private data class ProfileStat(
     val color: Color
 )
 
-/** Two-by-two tile grid so contribution shortcuts stay glanceable instead of a long list. */
+/** Borderless two-by-two shortcuts keep contributions glanceable without visual clutter. */
 @Composable
 private fun ContributionGrid(
     uiState: ProfileUiState,
@@ -600,7 +605,7 @@ private fun ContributionGrid(
             text = "আমার অবদান",
             color = Ink,
             fontFamily = BanglaFamily,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
             fontSize = 15.sp,
             modifier = Modifier.padding(start = 2.dp, top = 2.dp)
         )
@@ -655,16 +660,14 @@ private fun ContributionTile(
     Surface(
         onClick = onClick,
         modifier = modifier,
-        color = CardWhite,
-        shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(1.dp, FieldBorder),
-        shadowElevation = 1.dp
+        color = Color.Transparent,
+        shape = RoundedCornerShape(14.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .defaultMinSize(minHeight = 62.dp)
-                .padding(horizontal = 10.dp, vertical = 10.dp),
+                .padding(horizontal = 4.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
@@ -713,7 +716,7 @@ private fun ProfileSectionHeading(
         text = text,
         color = Ink,
         fontFamily = BanglaFamily,
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 15.sp,
         modifier = modifier.padding(start = 2.dp, top = 2.dp)
     )
@@ -724,18 +727,10 @@ private fun ProfileSectionCard(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        color = CardWhite,
-        shape = ProfileCardShape,
-        border = BorderStroke(1.dp, FieldBorder),
-        shadowElevation = 1.dp
-    ) {
-        Column(modifier = Modifier.fillMaxWidth()) { content() }
-    }
+    Column(modifier = modifier.fillMaxWidth()) { content() }
 }
 
-/** Collapsible privacy card keeps lower-frequency actions compact. */
+/** Collapsible privacy section keeps lower-frequency actions compact. */
 @Composable
 private fun ExpandableSection(
     icon: ImageVector,
@@ -754,10 +749,7 @@ private fun ExpandableSection(
 
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = CardWhite,
-        shape = ProfileCardShape,
-        border = BorderStroke(1.dp, FieldBorder),
-        shadowElevation = 1.dp
+        color = Color.Transparent
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Surface(
@@ -784,7 +776,7 @@ private fun ExpandableSection(
                             text = title,
                             color = Ink,
                             fontFamily = BanglaFamily,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.SemiBold,
                             fontSize = 14.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -831,9 +823,8 @@ private fun LogoutButton(
     Surface(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
-        color = CardWhite,
-        shape = ProfileCardShape,
-        border = BorderStroke(1.dp, DangerRed.copy(alpha = 0.35f))
+        color = Color.Transparent,
+        shape = RoundedCornerShape(14.dp)
     ) {
         Row(
             modifier = Modifier
@@ -854,7 +845,7 @@ private fun LogoutButton(
                 text = "লগআউট",
                 color = DangerRed,
                 fontFamily = BanglaFamily,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 fontSize = 14.sp
             )
         }
@@ -894,8 +885,8 @@ private fun ProfileRow(
                 text = label,
                 color = labelColor,
                 fontFamily = BanglaFamily,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 13.sp,
+                fontWeight = FontWeight.Normal,
+                fontSize = 14.sp,
                 modifier = Modifier.weight(1f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -924,7 +915,7 @@ private fun ProfileRow(
 private fun RowDivider(modifier: Modifier = Modifier) {
     HorizontalDivider(
         modifier = modifier.padding(start = 48.dp),
-        color = FieldBorder
+        color = FieldBorder.copy(alpha = 0.75f)
     )
 }
 
