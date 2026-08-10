@@ -61,7 +61,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -89,6 +88,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.rork.varabondhu.ui.components.AppBottomNavigation
 import com.rork.varabondhu.ui.components.MainDestination
+import com.rork.varabondhu.ui.localization.AppLanguage
+import com.rork.varabondhu.ui.localization.LocalAppLanguage
+import com.rork.varabondhu.ui.localization.LocalizedText as Text
 import com.rork.varabondhu.ui.theme.AppTheme
 import com.rork.varabondhu.ui.theme.BanglaFamily
 import com.rork.varabondhu.ui.theme.BrandGreen
@@ -115,7 +117,6 @@ private enum class ProfileDialog {
     BADGES,
     EDIT_PROFILE,
     NOTIFICATIONS,
-    LANGUAGE,
     HELP,
     TERMS,
     DELETE_ACCOUNT,
@@ -133,11 +134,13 @@ fun ProfileScreen(
     onNavigateHome: () -> Unit,
     onNavigateToVaraDin: () -> Unit,
     onNavigateToPrivacyPolicy: () -> Unit,
+    onNavigateToLanguage: () -> Unit,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ProfileViewModel = viewModel()
 ) {
     val uiState: ProfileUiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val language: AppLanguage = LocalAppLanguage.current
     var activeDialog: ProfileDialog? by rememberSaveable { mutableStateOf(null) }
     var expandedSection: ProfileSection? by rememberSaveable { mutableStateOf(null) }
     var editedName: String by rememberSaveable(uiState.name) { mutableStateOf(uiState.name) }
@@ -224,8 +227,8 @@ fun ProfileScreen(
                     ProfileRow(
                         icon = Icons.Outlined.Language,
                         label = "ভাষা",
-                        trailingText = "বাংলা",
-                        onClick = { activeDialog = ProfileDialog.LANGUAGE }
+                        trailingText = if (language == AppLanguage.BANGLA) "বাংলা" else "English",
+                        onClick = onNavigateToLanguage
                     )
                     RowDivider()
                     ProfileRow(
@@ -279,28 +282,44 @@ fun ProfileScreen(
         ProfileDialog.MY_REPORTS -> InformationDialog(
             icon = Icons.Outlined.Description,
             title = "আমার রিপোর্ট",
-            message = "আপনি এখন পর্যন্ত ${uiState.totalReports.toBanglaDigits()}টি ভাড়ার রিপোর্ট দিয়েছেন, যার মধ্যে ${uiState.verifiedReports.toBanglaDigits()}টি যাচাই হয়েছে। নতুন ভাড়া যোগ করতে নিচের ‘ভাড়া দিন’ বাটনটি ব্যবহার করুন।",
+            message = if (language == AppLanguage.ENGLISH) {
+                "You have submitted ${uiState.totalReports} fare reports, including ${uiState.verifiedReports} verified reports. Use the Add fare button below to submit a new fare."
+            } else {
+                "আপনি এখন পর্যন্ত ${uiState.totalReports.toBanglaDigits()}টি ভাড়ার রিপোর্ট দিয়েছেন, যার মধ্যে ${uiState.verifiedReports.toBanglaDigits()}টি যাচাই হয়েছে। নতুন ভাড়া যোগ করতে নিচের ‘ভাড়া দিন’ বাটনটি ব্যবহার করুন।"
+            },
             onDismiss = { activeDialog = null }
         )
 
         ProfileDialog.SAVED_ROUTES -> InformationDialog(
             icon = Icons.Outlined.TurnedInNot,
             title = "সেভ করা রুট",
-            message = "আপনার নিয়মিত ব্যবহৃত ${uiState.savedRouteCount.toBanglaDigits()}টি রুট সেভ করা আছে। সেভ করা রুট থেকে সরাসরি ভাড়া দেখার সুবিধা শিগগিরই যুক্ত হবে।",
+            message = if (language == AppLanguage.ENGLISH) {
+                "You have saved ${uiState.savedRouteCount} regularly used routes. Viewing fares directly from saved routes is coming soon."
+            } else {
+                "আপনার নিয়মিত ব্যবহৃত ${uiState.savedRouteCount.toBanglaDigits()}টি রুট সেভ করা আছে। সেভ করা রুট থেকে সরাসরি ভাড়া দেখার সুবিধা শিগগিরই যুক্ত হবে।"
+            },
             onDismiss = { activeDialog = null }
         )
 
         ProfileDialog.ACTIVITY -> InformationDialog(
             icon = Icons.Outlined.Timeline,
             title = "অ্যাক্টিভিটি",
-            message = "গত ৩০ দিনে আপনার ${uiState.recentActivityCount.toBanglaDigits()}টি কার্যক্রম রেকর্ড হয়েছে। বিস্তারিত তালিকা শিগগিরই এখানে দেখা যাবে।",
+            message = if (language == AppLanguage.ENGLISH) {
+                "You recorded ${uiState.recentActivityCount} activities in the last 30 days. A detailed history is coming soon."
+            } else {
+                "গত ৩০ দিনে আপনার ${uiState.recentActivityCount.toBanglaDigits()}টি কার্যক্রম রেকর্ড হয়েছে। বিস্তারিত তালিকা শিগগিরই এখানে দেখা যাবে।"
+            },
             onDismiss = { activeDialog = null }
         )
 
         ProfileDialog.BADGES -> InformationDialog(
             icon = Icons.Outlined.EmojiEvents,
             title = "ব্যাজ",
-            message = "নির্ভরযোগ্য ভাড়ার তথ্য দেওয়ার জন্য আপনি ${uiState.badgeCount.toBanglaDigits()}টি ব্যাজ অর্জন করেছেন। বেশি রিপোর্ট যাচাই হলে নতুন ব্যাজ যুক্ত হবে।",
+            message = if (language == AppLanguage.ENGLISH) {
+                "You earned ${uiState.badgeCount} badges for sharing reliable fare information. More verified reports unlock new badges."
+            } else {
+                "নির্ভরযোগ্য ভাড়ার তথ্য দেওয়ার জন্য আপনি ${uiState.badgeCount.toBanglaDigits()}টি ব্যাজ অর্জন করেছেন। বেশি রিপোর্ট যাচাই হলে নতুন ব্যাজ যুক্ত হবে।"
+            },
             onDismiss = { activeDialog = null }
         )
 
@@ -320,13 +339,6 @@ fun ProfileScreen(
         ProfileDialog.NOTIFICATIONS -> NotificationSettingsDialog(
             isEnabled = uiState.hasNotificationsEnabled,
             onToggle = viewModel::toggleNotifications,
-            onDismiss = { activeDialog = null }
-        )
-
-        ProfileDialog.LANGUAGE -> InformationDialog(
-            icon = Icons.Outlined.Language,
-            title = "ভাষা",
-            message = "VaraBondhu বর্তমানে বাংলা ভাষায় ব্যবহার করা যাচ্ছে। ইংরেজি ভাষা শিগগিরই যুক্ত হবে।",
             onDismiss = { activeDialog = null }
         )
 
@@ -1146,6 +1158,7 @@ private fun ProfileScreenPreview() {
             onNavigateHome = {},
             onNavigateToVaraDin = {},
             onNavigateToPrivacyPolicy = {},
+            onNavigateToLanguage = {},
             onLogout = {}
         )
     }

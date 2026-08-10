@@ -4,9 +4,14 @@ import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.getValue
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.rork.varabondhu.ui.localization.AppLanguageProvider
+import com.rork.varabondhu.ui.localization.LanguageViewModel
 import com.rork.varabondhu.ui.navigation.AppNavigation
 import com.mapbox.common.MapboxOptions
 import com.rork.varabondhu.ui.theme.AppTheme
@@ -24,8 +29,15 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.BLACK)
         )
         setContent {
-            AppTheme {
-                AppNavigation()
+            val languageViewModel: LanguageViewModel = viewModel()
+            val language by languageViewModel.language.collectAsStateWithLifecycle()
+            AppLanguageProvider(language = language) {
+                AppTheme {
+                    AppNavigation(
+                        language = language,
+                        onLanguageSelected = languageViewModel::selectLanguage
+                    )
+                }
             }
         }
     }

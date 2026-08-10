@@ -15,10 +15,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.rork.varabondhu.location.LocationTarget
 import com.rork.varabondhu.location.LocationViewModel
+import com.rork.varabondhu.ui.localization.AppLanguage
 import com.rork.varabondhu.ui.screens.FareResultScreen
 import com.rork.varabondhu.ui.screens.ForgotPasswordScreen
 import com.rork.varabondhu.ui.screens.HomeScreen
 import com.rork.varabondhu.ui.screens.LocationPickerScreen
+import com.rork.varabondhu.ui.screens.LanguageSelectionScreen
 import com.rork.varabondhu.ui.screens.LoginScreen
 import com.rork.varabondhu.ui.screens.OtpVerificationScreen
 import com.rork.varabondhu.ui.screens.PrivacyPolicyScreen
@@ -30,6 +32,8 @@ import com.rork.varabondhu.ui.screens.VaraDinScreen
 
 private object Route {
     const val SPLASH = "splash"
+    const val LANGUAGE = "language"
+    const val LANGUAGE_SETTINGS = "languageSettings"
     const val LOGIN = "login"
     const val SIGN_UP = "signUp"
     const val FORGOT_PASSWORD = "forgotPassword"
@@ -48,7 +52,10 @@ private object Route {
 private const val TRANSITION_MILLIS = 300
 
 @Composable
-fun AppNavigation() {
+fun AppNavigation(
+    language: AppLanguage,
+    onLanguageSelected: (AppLanguage) -> Unit
+) {
     val navController = rememberNavController()
     val locationViewModel: LocationViewModel = viewModel()
     val locationState by locationViewModel.uiState.collectAsStateWithLifecycle()
@@ -66,11 +73,33 @@ fun AppNavigation() {
         composable(Route.SPLASH) {
             SplashScreen(
                 onFinished = {
-                    navController.navigate(Route.LOGIN) {
+                    navController.navigate(Route.LANGUAGE) {
                         popUpTo(Route.SPLASH) { inclusive = true }
                         launchSingleTop = true
                     }
                 }
+            )
+        }
+
+        composable(Route.LANGUAGE) {
+            LanguageSelectionScreen(
+                selectedLanguage = language,
+                onSelectLanguage = onLanguageSelected,
+                onContinue = {
+                    navController.navigate(Route.LOGIN) {
+                        popUpTo(Route.LANGUAGE) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
+
+        composable(Route.LANGUAGE_SETTINGS) {
+            LanguageSelectionScreen(
+                selectedLanguage = language,
+                onSelectLanguage = onLanguageSelected,
+                onContinue = { navController.popBackStack() },
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 
@@ -198,6 +227,9 @@ fun AppNavigation() {
                 },
                 onNavigateToPrivacyPolicy = {
                     navController.navigate(Route.PRIVACY_POLICY) { launchSingleTop = true }
+                },
+                onNavigateToLanguage = {
+                    navController.navigate(Route.LANGUAGE_SETTINGS) { launchSingleTop = true }
                 },
                 onLogout = {
                     navController.navigate(Route.LOGIN) {

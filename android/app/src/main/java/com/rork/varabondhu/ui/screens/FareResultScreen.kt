@@ -18,6 +18,7 @@ import androidx.compose.material.icons.outlined.BubbleChart
 import androidx.compose.material.icons.outlined.VerifiedUser
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.*
+import com.rork.varabondhu.ui.localization.LocalizedText as Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
